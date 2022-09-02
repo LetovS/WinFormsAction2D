@@ -34,16 +34,13 @@ namespace Actions
 
         public Task4()
         {
+
             points = new List<Point>();// { new Point(38,28), new Point(479, 128), new Point(397, 256), new Point(38, 128) };
             flags = new List<bool>();
             p = new PictureBox();
-
             timer = new Timer();
             timer.Interval = 300;
             timer.Tick += MoveFigure;
-
-
-
             // Динамическое создание формы с кнопками 
             this.Size = new Size(800, 500);
             this.Text = "Draw figures";
@@ -62,7 +59,7 @@ namespace Actions
 
             Button move = new Button() { Text = "Движение" };
             move.SetBounds(INDENT, param.Bottom + INDENT, btnWidth, btnHeight);
-            move.Click += (o, e) => { timer.Enabled = !timer.Enabled; };
+            move.Click += (o,e) => { timer.Enabled = !timer.Enabled; };
 
 
             Button clear = new Button() { Text = "Очистить"};
@@ -100,6 +97,7 @@ namespace Actions
             p.BorderStyle = BorderStyle.FixedSingle;
             p.Paint += DrawSomethings;
             p.MouseClick += AddPoint;
+            
             baseBackColor = p.BackColor;
             #endregion
 
@@ -107,7 +105,7 @@ namespace Actions
             #region Обработчики событий
             KeyPreview = true;
             KeyDown += PushKeys;
-
+            
             #endregion
 
 
@@ -127,18 +125,83 @@ namespace Actions
             #endregion
         }
 
+        /// <summary>
+        /// Добавление точек с флагами.
+        /// </summary>
+        private void AddPoint(object sender, MouseEventArgs e)
+        {
+            
+            var t = e.Clicks;
+            if (editPoints)
+            {
+                points.Add(e.Location);
+                flags.Add(true);
+            }
+            else
+            {
+                if (points.Count > 0)
+                {
+                    bool flag = false;
+                    int epsilone = 15;
+                    var w = e.Location;
+                    for (int i = 0; i < points.Count; i++)
+                    {
+                        
+                        if ((points[i].X + epsilone > e.X && points[i].X - epsilone < e.X) && (points[i].Y + epsilone > e.Y && points[i].Y - epsilone < e.Y))
+                        {
+                            int index = -1;
+                            Point item = points[i];
+                            p.MouseDown += (o1,e1) => { flag = true; index = points.FindIndex(x => x.X == points[i].X && x.Y == points[i].Y); points.Remove(points[i]); };
+                            p.MouseMove += (o2, e2) =>
+                            {
+                                if (flag)
+                                {
+                                    p.CreateGraphics().DrawEllipse(Pens.Red, e2.X, e2.Y, 10,10);
+                                    p.Refresh();
+                                }
+                            };
+                            p.MouseDown += (o3,e3) => { flag = false;  points.Insert(index, item); };
+                        }
+                    }
+
+                    
+                    
+                }
+                
+            }
+            p.Refresh();
+        }
+
+
         private void PushKeys(object sender, KeyEventArgs e)
         {
             switch (e.KeyCode)
             {
+                case Keys.Up:
+                case Keys.Down:
+                case Keys.Right:
+                case Keys.Left:
+                    
+                    e.Handled = true;
+                    break;
+                case Keys.Escape:
+                    (sender as Task4).p.CreateGraphics().Clear(baseBackColor);
+                    points.Clear();
+                    e.Handled = true;
+                    break;
+                case Keys.Space:
+                    timer.Enabled = !timer.Enabled;
+                    e.Handled = true;
+                    break;
                 case Keys.Add:
                 case Keys.Oemplus:
                     if (timer.Enabled)
                     {
                         timer.Interval += 10;
                         msg.Text = $" Скорость: {timer.Interval} мс";
-                        e.Handled = true;
+                       
                     }
+                    e.Handled = true;
                     return;
                 case Keys.Subtract:
                 case Keys.OemMinus:
@@ -146,6 +209,7 @@ namespace Actions
                     //e.Handled = true;
                     timer.Interval = (timer.Interval - 10 > 0) ? timer.Interval -= 10 : 1;
                     msg.Text = (timer.Interval <= 1) ? "Макс. скорость" : $" Скорость: {timer.Interval} мс";
+                    e.Handled = true;
                     return;
                 default:
                     break;
@@ -228,18 +292,7 @@ namespace Actions
                 }
             }
         }
-        /// <summary>
-        /// Добавление точек с флагами.
-        /// </summary>
-        private void AddPoint(object sender, MouseEventArgs e)
-        {
-            if (editPoints)
-            {
-                points.Add(e.Location);
-                flags.Add(true);
-            }
-            p.Refresh();
-        }
+        
         /// <summary>
         /// Отрисовка фигур.
         /// </summary>
@@ -336,7 +389,6 @@ namespace Actions
                 }
             }
         }
-
         /// <summary>
         /// Обработка нажатий кнопок. 
         /// </summary>
@@ -354,5 +406,29 @@ namespace Actions
                     break;
             }
         }
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            switch (keyData)
+            {
+                case Keys.Up:
+                case Keys.Down:
+                case Keys.Right:
+                case Keys.Left:
+
+                    return true;
+                    
+                case Keys.Space:
+                case Keys.Escape:
+                case Keys.Subtract:
+                case Keys.OemMinus:
+                case Keys.Add:
+                case Keys.Oemplus:
+                    this.Text = "Нажали "+ keyData;
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
     }
 }
