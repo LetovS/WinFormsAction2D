@@ -9,7 +9,7 @@ namespace Actions
     public class Task4:Form
     {
         #region Consts
-        private const int INDENT = 10;
+        private const int INDENT = 9;
         private const int btnWidth = 90;
         private const int btnHeight = 40;
         #endregion
@@ -18,29 +18,75 @@ namespace Actions
         /// <summary>
         /// Список рисуемых объектов.
         /// </summary>
-        enum LineType { None = 1, Curve = 2, Bezier = 3, Polygon =4 , FilledCurve =5 }
+        public enum LineType { Point = 1, Curve = 2, Bezier = 3, Polygon =4 , FilledCurve =5 }
+        /// <summary>
+        /// Тип ручного перемещения объекта.
+        /// </summary>
+        enum TypeHandChangePositionObject
+        { 
+            /// <summary>
+            /// Смещение вправо.
+            /// </summary>
+            xR = 1,
+            /// <summary>
+            /// Смещение влево.
+            /// </summary>
+            xL,
+            /// <summary>
+            /// Смещение вверх.
+            /// </summary>
+            yU,
+            /// <summary>
+            /// Смещение вниз.
+            /// </summary>
+            yD
+        }
+
         /// <summary>
         /// Коллекция точек.
         /// </summary>
         private List<Point> points;
+        /// <summary>
+        /// Состояние отражения точек.
+        /// </summary>
         private List<bool> flags;
+        /// <summary>
+        /// Базовый цвет фона плоскости отрисовки.
+        /// </summary>
         private Color baseBackColor;
+        /// <summary>
+        /// Флаг режима добавления точек.
+        /// </summary>
         private bool editPoints = false;
+        /// <summary>
+        /// Флаг редактирования положения точки.
+        /// </summary>
+        private bool flagMOves = false;
+        /// <summary>
+        /// Плоскость рисования.
+        /// </summary>
         private PictureBox p;
+        /// <summary>
+        /// Прорисовка объектов.
+        /// </summary>
         private Timer timer;
+        /// <summary>
+        /// Оповещение пользователя.
+        /// </summary>
         private Label msg;
         #endregion
-
-
         public Task4()
         {
+            //TODO сделать реализацию параметров, добавить там флорму для показа и изменения координат всех точек, там же сделать сохранение и залгрузку точек.
 
-            points = new List<Point>();// { new Point(38,28), new Point(479, 128), new Point(397, 256), new Point(38, 128) };
+            points = new List<Point>();
             flags = new List<bool>();
             p = new PictureBox();
+
             timer = new Timer();
             timer.Interval = 300;
             timer.Tick += MoveFigure;
+
             // Динамическое создание формы с кнопками 
             this.Size = new Size(800, 500);
             this.Text = "Draw figures";
@@ -56,6 +102,11 @@ namespace Actions
 
             Button param = new Button() { Text = "Параметры" };
             param.SetBounds(INDENT, addPoint.Bottom + INDENT, btnWidth, btnHeight);
+            param.Click += SetParams;
+
+
+
+
 
             Button move = new Button() { Text = "Движение" };
             move.SetBounds(INDENT, param.Bottom + INDENT, btnWidth, btnHeight);
@@ -66,50 +117,59 @@ namespace Actions
             clear.SetBounds(INDENT, move.Bottom + INDENT, btnWidth, btnHeight);
             clear.Tag = p;
             clear.Click += (o, e) => { ((o as Button).Tag as PictureBox).CreateGraphics().Clear(baseBackColor); points.Clear(); };
+            
             Button curve = new Button() { Text = "Кривая"};
             curve.SetBounds(INDENT, clear.Bottom + INDENT, btnWidth, btnHeight);
-            curve.Tag = (item1: 2, item2:p);
+            curve.Tag = 2;
             curve.Click += DrawLineType;
 
             Button bezier = new Button() { Text = "Безье"};
-            bezier.Tag = (3, p);
+            bezier.Tag = 3;
             bezier.Click += DrawLineType;
             bezier.SetBounds(INDENT, curve.Bottom + INDENT, btnWidth, btnHeight);
 
             Button polygon = new Button() { Text = "Ломанная"};
-            polygon.Tag = (4, p);
+            polygon.Tag = 4;
             polygon.Click += DrawLineType;
             polygon.SetBounds(INDENT, bezier.Bottom + INDENT, btnWidth, btnHeight);
 
             Button fiilCurve = new Button() { Text = "Закрашенная"};
-            fiilCurve.Tag = (5, p);
+            fiilCurve.Tag = 5;
             fiilCurve.Click += DrawLineType;
             fiilCurve.SetBounds(INDENT, polygon.Bottom + INDENT, btnWidth, btnHeight);
 
 
             msg = new Label();
-            msg.SetBounds(INDENT, fiilCurve.Bottom + INDENT, btnWidth, btnHeight);
+            msg.SetBounds(INDENT, fiilCurve.Bottom + INDENT, btnWidth, btnHeight - 10);
             msg.TextAlign = ContentAlignment.MiddleCenter;
+            
+            CheckBox bufferDraw = new CheckBox() { Text = "Buffer выкл" };
+            bufferDraw.SetBounds(INDENT, msg.Bottom + 4, btnWidth, 20);
+            
+            bufferDraw.Click += (o, e) =>
+            {
+                (o as CheckBox).Checked = (o as CheckBox).Checked;
+                (o as CheckBox).Text = ((o as CheckBox).Checked) ? "Buffer вкл" : "Buffer выкл";
+                DoubleBuffered = (o as CheckBox).Checked;
+            };
+            
             #endregion
 
             #region Мальберт
             p.SetBounds(addPoint.Right + INDENT, INDENT, ClientSize.Width - addPoint.Width - 3 * INDENT, ClientSize.Height - 2 * INDENT);
             p.BorderStyle = BorderStyle.FixedSingle;
-            p.Paint += DrawSomethings;
-            p.MouseClick += AddPoint;
-            
             baseBackColor = p.BackColor;
             #endregion
-
 
             #region Обработчики событий
             KeyPreview = true;
             KeyDown += PushKeys;
-            
+            p.Paint += DrawSomethings;
+            p.MouseDown += AddPoint;
+            p.MouseMove += Mover;
+            p.MouseUp += EndMover;
+
             #endregion
-
-
-
 
             #region Добавление кнопок в форму
             this.Controls.Add(addPoint);
@@ -122,57 +182,113 @@ namespace Actions
             this.Controls.Add(fiilCurve);
             this.Controls.Add(msg);
             this.Controls.Add(p);
+            this.Controls.Add(bufferDraw);
             #endregion
         }
 
+        private void SetParams(object sender, EventArgs e)
+        {
+            Parametrs param = new Parametrs();
+            if (param.ShowDialog() == DialogResult.OK)
+            {
+                
+                p.Refresh();
+            }
+        }
+
+        /// <summary>
+        /// Редактирование положения точки.
+        /// </summary>
+        private void Mover(object sender, MouseEventArgs e)
+        {
+            if (flagMOves)
+            {
+                p.CreateGraphics().FillEllipse(Brushes.Red, e.X, e.Y, 10, 10);
+                Point temp = points[(int)msg.Tag];
+                temp.X += e.X;
+                temp.Y += e.Y;                
+                points[(int)msg.Tag] = temp;
+                p.Refresh();
+            }
+        }
+        /// <summary>
+        /// Завершение редактироания положения точки.
+        /// </summary>
+        private void EndMover(object sender, MouseEventArgs e)
+        {
+            if (flagMOves)
+            {
+                flagMOves = false;
+                Point temp = points[(int)msg.Tag];
+                temp.X = e.X;
+                temp.Y = e.Y;
+                points[(int)msg.Tag] = temp;
+                msg.Text = "Перемещена";
+                p.Refresh();
+            }
+        }
         /// <summary>
         /// Добавление точек с флагами.
         /// </summary>
         private void AddPoint(object sender, MouseEventArgs e)
         {
-            
-            var t = e.Clicks;
-            if (editPoints)
+            if (e.Button == MouseButtons.Left)
             {
-                points.Add(e.Location);
-                flags.Add(true);
-            }
-            else
-            {
-                if (points.Count > 0)
+                if (points.Count > 0 && CheckPoint(e, out int index))
                 {
-                    bool flag = false;
-                    int epsilone = 15;
-                    var w = e.Location;
-                    for (int i = 0; i < points.Count; i++)
+                    msg.Tag = index;
+                    msg.Text = "Перемещается " + (index + 1) + " точка";
+                    flagMOves = true;
+                }
+                else
+                {
+                    if (editPoints)
                     {
-                        
-                        if ((points[i].X + epsilone > e.X && points[i].X - epsilone < e.X) && (points[i].Y + epsilone > e.Y && points[i].Y - epsilone < e.Y))
-                        {
-                            int index = -1;
-                            Point item = points[i];
-                            p.MouseDown += (o1,e1) => { flag = true; index = points.FindIndex(x => x.X == points[i].X && x.Y == points[i].Y); points.Remove(points[i]); };
-                            p.MouseMove += (o2, e2) =>
-                            {
-                                if (flag)
-                                {
-                                    p.CreateGraphics().DrawEllipse(Pens.Red, e2.X, e2.Y, 10,10);
-                                    p.Refresh();
-                                }
-                            };
-                            p.MouseDown += (o3,e3) => { flag = false;  points.Insert(index, item); };
-                        }
+                        points.Add(new Point(e.X, e.Y));
+                        flags.Add(true);
+                        p.Refresh();
                     }
-
-                    
-                    
                 }
                 
             }
-            p.Refresh();
+            else if (e.Button == MouseButtons.Right)
+            {
+                if (CheckPoint(e, out int index))
+                {
+                    points.RemoveAt(index);
+                    flags.RemoveAt(index);
+                    msg.Text = "Удалена " + (index + 1) + " точка";
+                }
+                p.Refresh();
+
+            }
+            
+            
         }
-
-
+        /// <summary>
+        /// Проверка точек.
+        /// </summary>
+        private bool CheckPoint(MouseEventArgs e, out int index)
+        {
+            for (int i = 0; i < points.Count; i++)
+            {
+                int epsilone = 25;
+                if ((
+                    points[i].X + epsilone > e.X
+                    && points[i].X - epsilone < e.X)
+                    && (points[i].Y + epsilone > e.Y &&
+                    points[i].Y - epsilone < e.Y))
+                {
+                    index = points.FindIndex(x => x.X == points[i].X && x.Y == points[i].Y);
+                    return true;
+                }
+            }
+            index = -1;
+            return false;
+        }
+        /// <summary>
+        /// Обработчик клавиш.
+        /// </summary>
         private void PushKeys(object sender, KeyEventArgs e)
         {
             switch (e.KeyCode)
@@ -215,7 +331,6 @@ namespace Actions
                     break;
             }
         }
-
         /// <summary>
         /// Реализация движения.
         /// </summary>
@@ -292,13 +407,13 @@ namespace Actions
                 }
             }
         }
-        
         /// <summary>
         /// Отрисовка фигур.
         /// </summary>
         private void DrawSomethings(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
+            Pen pen = Pens.Green;
             if (points.Count > 0)
             {
                 foreach (var point in points)
@@ -310,7 +425,7 @@ namespace Actions
             {
                 switch ((LineType)(sender as PictureBox).Tag)
                 {
-                    case LineType.None:
+                    case LineType.Point:
                         //TODO проработать,если не нужно постоянное отображение точек.
                         break;
                     case LineType.Curve:
@@ -355,11 +470,7 @@ namespace Actions
                         // 2 points need
                         if (points.Count > 2)
                         {
-                            //foreach (var point in points)
-                            //{
-                            //    g.FillEllipse(Brushes.Green, point.X, point.Y, 8, 8);
-                            //}
-                            g.DrawPolygon(Pens.Green, points.ToArray());
+                            g.DrawPolygon(pen, points.ToArray());
                             msg.Text = "";
                         }
                         else
@@ -394,14 +505,15 @@ namespace Actions
         /// </summary>
         private void DrawLineType(object sender, EventArgs e)
         {
-            switch ((LineType)(((int, PictureBox))(sender as Button).Tag).Item1)
+            switch ((LineType)(sender as Button).Tag)
             {
-                case LineType.None:
+                case LineType.Point:
                 case LineType.Curve:
                 case LineType.Bezier:
                 case LineType.Polygon:                    
                 case LineType.FilledCurve:
-                    p.Tag = (LineType)(((int, PictureBox))(sender as Button).Tag).Item1;
+                    // Добавляем в мальберт объект лперечисления LineType
+                    p.Tag = (LineType)(sender as Button).Tag;
                     p.Refresh();
                     break;
             }
@@ -414,7 +526,7 @@ namespace Actions
                 case Keys.Down:
                 case Keys.Right:
                 case Keys.Left:
-
+                    HandMoveObj(keyData);
                     return true;
                     
                 case Keys.Space:
@@ -429,6 +541,82 @@ namespace Actions
                     return true;
             }
         }
+        /// <summary>
+        /// Смещение объектов ручками.
+        /// </summary>
+        private void HandMoveObj(Keys keyData)
+        {
+            
+            switch (keyData)
+            {
+                case Keys.Up:
+                    NewMethod(TypeHandChangePositionObject.yU);
+                    break;
+                case Keys.Down:
+                    NewMethod(TypeHandChangePositionObject.yD);
+                    break;
+                case Keys.Right:
+                    NewMethod(TypeHandChangePositionObject.xR);
+                    break;
+                case Keys.Left:
+                    NewMethod(TypeHandChangePositionObject.xL);
+                    break;
+                default:
+                    break;
+            }
+            
+        }
+        /// <summary>
+        /// Сдвиг объекта стрелками.
+        /// </summary>
+        private void NewMethod(TypeHandChangePositionObject yU)
+        {
+            int delta = 10;
+            Point temp;
+            var area = p.ClientSize;
+            for (int i = 0; i < points.Count; i++)
+            {
+                temp = points[i];
+                switch (yU)
+                {
+                    case TypeHandChangePositionObject.xR:
+                        if (temp.X + delta < area.Width)
+                        {
+                            temp.X += delta;
+                        }
+                        else
+                            temp.X = area.Width - 5;
 
+                        break;
+                    case TypeHandChangePositionObject.xL:
+                        if (temp.X - delta > 0)
+                        {
+                            temp.X -= delta;
+                        }
+                        else
+                            temp.X = 0;
+                        break;
+                    case TypeHandChangePositionObject.yU:
+
+                        if (temp.Y - delta > 0)
+                        {
+                            temp.Y -= delta;
+                        }
+                        else
+                            temp.Y = 0;
+                        break;
+                    case TypeHandChangePositionObject.yD:
+                        if (temp.Y + delta < area.Height)
+                        {
+                            temp.Y += delta;
+                        }
+                        else
+                            temp.Y = area.Height - 5;
+                        break;
+                }
+                points[i] = temp;
+                p.Refresh();
+            }
+        }
     }
 }

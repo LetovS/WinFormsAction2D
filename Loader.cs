@@ -7,7 +7,7 @@ namespace Actions
     {
         static void Main()
         {
-            Application.Run(new Task4());
+            Application.Run(new Parametrs());
         }
     }
 }

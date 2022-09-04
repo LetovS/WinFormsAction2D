@@ -45,6 +45,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Loader.cs" />
+    <Compile Include="Parametrs.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Task4.cs">
       <SubType>Form</SubType>
     </Compile>
