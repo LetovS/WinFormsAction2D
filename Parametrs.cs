@@ -8,10 +8,15 @@ namespace Actions
 {
     public class Parametrs : Form
     {
+        
         private Label examplePoint;
+
         private Label exampleCurve;
+
         private Label exampleBezier;
+
         private Label examplePolygon;
+
         private Label exampleFilledCurve;
 
         string[] colorsPoint;
@@ -41,10 +46,6 @@ namespace Actions
             colorsPolygon = GetPenColors();
             colorsBezie = GetPenColors();
             colorsFillCurve = GetPenColors();
-
-
-
-
 
             this.Size = new Size(350, 600);
             this.Text = "Settings";
@@ -134,7 +135,7 @@ namespace Actions
             lbl2Curve.TextAlign = ContentAlignment.MiddleLeft;
 
 
-            Label exampleCurve = new Label();
+            exampleCurve = new Label();
             exampleCurve.BorderStyle = BorderStyle.FixedSingle;
             exampleCurve.SetBounds(colorPoint.Right + delta, colorPoint.Top, pPoint.ClientSize.Width - Point.Width - colorPoint.Width - 8 * delta, lbl2Point.Bottom - Point.Top);
 
@@ -302,7 +303,7 @@ namespace Actions
             sizeCurve.TextChanged += ChangeToolSize;
             exampleCurve.Paint += ExampleDraw;
             sizeCurve.Tag = (LineType.Curve, exampleCurve);
-            colorCurve.Tag = (LineType.Point, exampleCurve);
+            colorCurve.Tag = (LineType.Curve, exampleCurve);
 
 
             colorBezier.SelectedIndexChanged += ChangeToolColor;
@@ -394,14 +395,9 @@ namespace Actions
             if (t.Tag != null)
             {
                 (LineType type, Label graph) k = (ValueTuple<LineType, Label>)(t.Tag);
-
                 var paintObj = k.graph;
-
                 int index;
                 Color temp;
-                index = t.SelectedIndex;
-               
-
                 switch (k.type)
                 {
                     case LineType.Point:
@@ -409,7 +405,6 @@ namespace Actions
                         temp = Color.FromName(colorsPoint[index]);
                         setPoint.color = temp;
                         paintObj.Tag = LineType.Point;
-
                         break;
                     case LineType.Curve:
                         index = t.SelectedIndex;
@@ -467,8 +462,6 @@ namespace Actions
                         break;
                     case LineType.FilledCurve:
                         g.DrawLine(new Pen(setFillCurve.color, setFillCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
-                        break;
-                    default:
                         break;
                 }
             }
