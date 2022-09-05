@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Windows.Forms;
 using System.Drawing;
-using System.Collections.Generic;
-using System.Linq;
+using System.Windows.Forms;
 using static Actions.Task4;
 //using System.Windows.Controls;
 
@@ -10,16 +8,18 @@ namespace Actions
 {
     public class Parametrs : Form
     {
-        private ComboBox colorPoint;
-        private ComboBox colorCurve;
-        private ComboBox colorBezier;
-        private ComboBox colorPolygon;
-        private ComboBox colorFilledCurve;
+        private Label examplePoint;
+        private Label exampleCurve;
+        private Label exampleBezier;
+        private Label examplePolygon;
+        private Label exampleFilledCurve;
 
-        
+        string[] colorsPoint;
+        string[] colorsCurve;
+        string[] colorsPolygon;
+        string[] colorsBezie;
+        string[] colorsFillCurve;
 
-
-        string[] colorToolForDraw;
 
         (Color color, int size) setPoint = (Color.Black, 3);
         (Color color, int size) setPolygon = (Color.Black, 3);
@@ -36,7 +36,15 @@ namespace Actions
             
             int delta = 5;
             int heightPanel = 90;
-            colorToolForDraw = GetPenColors();
+            colorsPoint = GetPenColors();
+            colorsCurve = GetPenColors();
+            colorsPolygon = GetPenColors();
+            colorsBezie = GetPenColors();
+            colorsFillCurve = GetPenColors();
+
+
+
+
 
             this.Size = new Size(350, 600);
             this.Text = "Settings";
@@ -58,9 +66,9 @@ namespace Actions
             lblPoint.Font = new Font("Arial", 8, FontStyle.Bold);
             lblPoint.SetBounds(delta, 0, ClientSize.Width, 20);
 
-            colorPoint = new ComboBox();
+            ComboBox colorPoint = new ComboBox();
             colorPoint.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorPoint.DataSource = colorToolForDraw;
+            colorPoint.DataSource = colorsPoint;
             colorPoint.MaxDropDownItems = 15;
             colorPoint.DropDownStyle = ComboBoxStyle.DropDownList;
 
@@ -80,7 +88,7 @@ namespace Actions
             lbl2Point.TextAlign = ContentAlignment.MiddleLeft;
 
 
-            Label examplePoint = new Label();
+            examplePoint = new Label();
             examplePoint.BorderStyle = BorderStyle.FixedSingle;
             examplePoint.SetBounds(colorPoint.Right + delta, colorPoint.Top, pPoint.ClientSize.Width - Point.Width - colorPoint.Width - 8* delta, lbl2Point.Bottom - Point.Top );
             
@@ -104,9 +112,9 @@ namespace Actions
             lblCurve.Font = new Font("Arial", 8, FontStyle.Bold);
             lblCurve.SetBounds(delta, 0, ClientSize.Width, 20);
 
-            colorCurve = new ComboBox();
+            ComboBox colorCurve = new ComboBox();
             colorCurve.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorCurve.DataSource = colorToolForDraw;
+            colorCurve.DataSource = colorsCurve;
             colorCurve.MaxDropDownItems = 15;
             colorCurve.DropDownStyle = ComboBoxStyle.DropDownList;
             
@@ -148,9 +156,9 @@ namespace Actions
             Label lblBezier = new Label() { Text = "Для безье:" };
             lblBezier.Font = new Font("Arial", 8, FontStyle.Bold);
             lblBezier.SetBounds(delta, 0, ClientSize.Width, 20);
-            colorBezier = new ComboBox();
+            ComboBox colorBezier = new ComboBox();
             colorBezier.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorBezier.DataSource = colorToolForDraw;
+            colorBezier.DataSource = colorsBezie;
             colorBezier.MaxDropDownItems = 15;
             colorBezier.DropDownStyle = ComboBoxStyle.DropDownList;
             
@@ -170,7 +178,7 @@ namespace Actions
             lbl2Bezier.TextAlign = ContentAlignment.MiddleLeft;
 
 
-            Label exampleBezier = new Label();
+            exampleBezier = new Label();
             exampleBezier.BorderStyle = BorderStyle.FixedSingle;
             exampleBezier.SetBounds(colorPoint.Right + delta, colorPoint.Top, pPoint.ClientSize.Width - Point.Width - colorPoint.Width - 8 * delta, lbl2Point.Bottom - Point.Top);
             
@@ -191,9 +199,10 @@ namespace Actions
             Label lblPolygon = new Label() { Text = "Для ломанной:" };
             lblPolygon.Font = new Font("Arial", 8, FontStyle.Bold);
             lblPolygon.SetBounds(delta, 0, ClientSize.Width, 20);
-            colorPolygon = new ComboBox();
+
+            ComboBox colorPolygon = new ComboBox();
             colorPolygon.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorPolygon.DataSource = colorToolForDraw;
+            colorPolygon.DataSource = colorsPolygon;
             colorPolygon.MaxDropDownItems = 15;
             colorPolygon.DropDownStyle = ComboBoxStyle.DropDownList;
            
@@ -213,7 +222,7 @@ namespace Actions
             lbl2Polygon.TextAlign = ContentAlignment.MiddleLeft;
 
 
-            Label examplePolygon = new Label();
+            examplePolygon = new Label();
             examplePolygon.BorderStyle = BorderStyle.FixedSingle;
             examplePolygon.SetBounds(colorPoint.Right + delta, colorPoint.Top, pPoint.ClientSize.Width - Point.Width - colorPoint.Width - 8 * delta, lbl2Point.Bottom - Point.Top);
 
@@ -241,9 +250,9 @@ namespace Actions
             lblFilledCurve.Font = new Font("Arial", 8, FontStyle.Bold);
             lblFilledCurve.SetBounds(delta, 0, ClientSize.Width, 20);
 
-            colorFilledCurve = new ComboBox();
+            ComboBox colorFilledCurve = new ComboBox();
             colorFilledCurve.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorFilledCurve.DataSource = colorToolForDraw;
+            colorFilledCurve.DataSource = colorsFillCurve;
             colorFilledCurve.MaxDropDownItems = 15;
             colorFilledCurve.DropDownStyle = ComboBoxStyle.DropDownList;
             
@@ -263,7 +272,7 @@ namespace Actions
             lbl2FilledCurve.TextAlign = ContentAlignment.MiddleLeft;
 
 
-            Label exampleFilledCurve = new Label();
+            exampleFilledCurve = new Label();
             exampleFilledCurve.BorderStyle = BorderStyle.FixedSingle;
             exampleFilledCurve.SetBounds(colorPoint.Right + delta, colorPoint.Top, pPoint.ClientSize.Width - Point.Width - colorPoint.Width - 8 * delta, lbl2Point.Bottom - Point.Top);
 
@@ -280,13 +289,14 @@ namespace Actions
 
             #region Actions about change color and/or size
 
-
+            sizePoint.Tag = (LineType.Point, examplePoint);
+            colorPoint.Tag = (LineType.Point, examplePoint);
+            colorPoint.Name = "colorPoint";
             colorPoint.SelectedIndexChanged += ChangeToolColor;
             sizePoint.TextChanged += ChangeToolSize;
             examplePoint.Paint += ExampleDraw;
 
-            sizePoint.Tag = (LineType.Point, examplePoint);
-            colorPoint.Tag = (LineType.Point, examplePoint);
+            
 
             colorCurve.SelectedIndexChanged += ChangeToolColor;
             sizeCurve.TextChanged += ChangeToolSize;
@@ -381,37 +391,6 @@ namespace Actions
         {
             var t = sender as ComboBox;
 
-
-
-
-
-            if (t == colorPoint)
-            {
-
-            }
-            else if (t == colorCurve)
-            {
-
-            }
-            else if (t == colorBezier)
-            {
-
-            }
-            else if (t == colorPolygon)
-            {
-
-            }
-            else if (t == colorFilledCurve)
-            {
-
-            }
-            //    private ComboBox colorPoint;
-            //private ComboBox colorpCurve;
-            //private ComboBox colorpBezier;
-            //private ComboBox colorpPolygon;
-            //private ComboBox colorpFilledCurve;
-
-
             if (t.Tag != null)
             {
                 (LineType type, Label graph) k = (ValueTuple<LineType, Label>)(t.Tag);
@@ -421,38 +400,38 @@ namespace Actions
                 int index;
                 Color temp;
                 index = t.SelectedIndex;
-                temp = Color.FromName(colorToolForDraw[index]);
+               
 
                 switch (k.type)
                 {
                     case LineType.Point:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorToolForDraw[index]);
+                        temp = Color.FromName(colorsPoint[index]);
                         setPoint.color = temp;
                         paintObj.Tag = LineType.Point;
 
                         break;
                     case LineType.Curve:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorToolForDraw[index]);
+                        temp = Color.FromName(colorsCurve[index]);
                         setCurve.color = temp;
                         paintObj.Tag = LineType.Curve;
                         break;
                     case LineType.Bezier:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorToolForDraw[index]);
+                        temp = Color.FromName(colorsBezie[index]);
                         setBezier.color = temp;
                         paintObj.Tag = LineType.Bezier;
                         break;
                     case LineType.Polygon:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorToolForDraw[index]);
+                        temp = Color.FromName(colorsPolygon[index]);
                         setPolygon.color = temp;
                         paintObj.Tag = LineType.Polygon;
                         break;
                     case LineType.FilledCurve:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorToolForDraw[index]);
+                        temp = Color.FromName(colorsFillCurve[index]);
                         setFillCurve.color = temp;
                         paintObj.Tag = LineType.FilledCurve;
                         break;
@@ -493,11 +472,35 @@ namespace Actions
                         break;
                 }
             }
+            else
+            {
+                if (t == examplePoint)
+                {
+                    g.FillEllipse(new SolidBrush(Color.FromName(colorsPoint[index])),t.ClientSize.Width/2 - setPoint.size/2, t.ClientSize.Height / 2 - setPoint.size / 2, setPoint.size, setPoint.size);
+                }
+                else if (t == exampleCurve)
+                {
+                    g.DrawLine(new Pen(Color.FromName(colorsCurve[index]), setCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                }
+                else if (t == exampleBezier)
+                {
+                    g.DrawLine(new Pen(Color.FromName(colorsBezie[index]), setBezier.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                }
+                else if (t == examplePolygon)
+                {
+                    g.DrawLine(new Pen(Color.FromName(colorsPolygon[index]), setPolygon.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                }
+            
+                else if (t == exampleFilledCurve)
+                {
+                    g.DrawLine(new Pen(Color.FromName(colorsFillCurve[index]), setFillCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                }
+            }
         }
         private string[] GetPenColors()
         {
             
-            var t = Enum.GetNames(typeof(ConsoleColor));
+            var t = Enum.GetNames(typeof(KnownColor));
             return t;
         }
         
