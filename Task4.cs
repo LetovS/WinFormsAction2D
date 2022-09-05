@@ -18,7 +18,7 @@ namespace Actions
         /// <summary>
         /// Список рисуемых объектов.
         /// </summary>
-        public enum LineType { Point = 1, Curve = 2, Bezier = 3, Polygon =4 , FilledCurve =5 }
+        public enum LineType { Point = 1, Curve = 2, Bezier = 3, Polygon =4 , FilledCurve = 5 }
         /// <summary>
         /// Тип ручного перемещения объекта.
         /// </summary>
