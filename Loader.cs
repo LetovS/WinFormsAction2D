@@ -5,9 +5,9 @@ namespace Actions
 {
     class Loader
     {
-        static void Main()
-        {
-            Application.Run(new Parametrs());
-        }
+        //static void Main()
+        //{
+        //    Application.Run(new Parametrs());
+        //}
     }
 }

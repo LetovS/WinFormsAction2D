@@ -77,8 +77,8 @@ namespace Actions
         #endregion
         public Task4()
         {
-            //TODO сделать реализацию параметров, добавить там флорму для показа и изменения координат всех точек, там же сделать сохранение и залгрузку точек.
-
+            //TODO 
+            
             points = new List<Point>();
             flags = new List<bool>();
             p = new PictureBox();
@@ -189,13 +189,13 @@ namespace Actions
         private void SetParams(object sender, EventArgs e)
         {
             Parametrs param = new Parametrs();
+            this.Visible = false;
             if (param.ShowDialog() == DialogResult.OK)
             {
-                
-                p.Refresh();
+                //Получить цвет.размер для лсоздания кистей и ручек
             }
+            this.Visible = true;
         }
-
         /// <summary>
         /// Редактирование положения точки.
         /// </summary>
@@ -617,6 +617,10 @@ namespace Actions
                 points[i] = temp;
                 p.Refresh();
             }
+        }
+        static void Main()
+        {
+            Application.Run(new Task4());
         }
     }
 }

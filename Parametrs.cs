@@ -8,15 +8,11 @@ namespace Actions
 {
     public class Parametrs : Form
     {
-        
+        //TODO как динамически формировать панели со здвигом вниз с учетом обработки.
         private Label examplePoint;
-
         private Label exampleCurve;
-
         private Label exampleBezier;
-
         private Label examplePolygon;
-
         private Label exampleFilledCurve;
 
         string[] colorsPoint;
@@ -26,7 +22,8 @@ namespace Actions
         string[] colorsFillCurve;
 
 
-        (Color color, int size) setPoint = (Color.Black, 3);
+
+        public (Color color, int size) setPoint = (Color.Black, 3);
         (Color color, int size) setPolygon = (Color.Black, 3);
         (Color color, int size) setCurve = (Color.Black, 3);
         (Color color, int size) setBezier = (Color.Black, 3);
@@ -51,7 +48,7 @@ namespace Actions
             this.Text = "Settings";
             this.MaximizeBox = false;
             this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-
+            this.StartPosition = FormStartPosition.CenterParent;
             Label lbl = new Label() { Text = "Настройки отображения."};
             lbl.TextAlign = ContentAlignment.MiddleLeft;
             lbl.Font = new Font("Arial", 12, FontStyle.Bold);
@@ -295,10 +292,8 @@ namespace Actions
             colorPoint.Name = "colorPoint";
             colorPoint.SelectedIndexChanged += ChangeToolColor;
             sizePoint.TextChanged += ChangeToolSize;
-            examplePoint.Paint += ExampleDraw;
-
             
-
+            examplePoint.Paint += ExampleDraw;
             colorCurve.SelectedIndexChanged += ChangeToolColor;
             sizeCurve.TextChanged += ChangeToolSize;
             exampleCurve.Paint += ExampleDraw;
