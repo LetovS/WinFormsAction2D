@@ -21,7 +21,11 @@ namespace Actions
         string[] colorsBezie;
         string[] colorsFillCurve;
 
-
+        public struct DrawSetting
+        {
+            public Color color;
+            public int size;
+        }
 
         public (Color color, int size) setPoint = (Color.Black, 3);
         (Color color, int size) setPolygon = (Color.Red, 1);
@@ -29,10 +33,9 @@ namespace Actions
         (Color color, int size) setBezier = (Color.Green, 1);
         (Color color, int size) setFillCurve = (Color.Blue, 1);
 
-        string[] title = { "Цвет пера", "Размер пера" };
+        private readonly string[] title = { "Цвет пера", "Размер пера" };
         public Parametrs()
         {
-            
             int delta = 5;
             int heightPanel = 90;
             colorsPoint = GetPenColors();
