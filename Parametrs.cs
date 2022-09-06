@@ -23,19 +23,40 @@ namespace Actions
 
         public struct DrawSetting
         {
+            /// <summary>
+            /// Цвет инструмента.
+            /// </summary>
             public Color color;
+            /// <summary>
+            /// Толщина линии/точки.
+            /// </summary>
             public int size;
+            LineType name;
+            public DrawSetting(Color color, int size, LineType name)
+            {
+                this.color = color;
+                this.size = size;
+                this.name = name;
+            }
+            public override string ToString()
+            {
+                return $"Цвет: {color.Name} , Размер:{size}";
+            }
         }
+        DrawSetting[] pointsSet;
+        //    { new DrawSetting(Color.Black, 3,"Point"),
+        //      new DrawSetting(Color.Red, 1, "Curve"),
+        //      new DrawSetting(Color.Orange, 1, "Bezier"),
+        //      new DrawSetting(Color.Green, 1, "Polygon"),
+        //      new DrawSetting(Color.Blue, 1, "FilledCurve")
+        //    };
+        
 
-        public (Color color, int size) setPoint = (Color.Black, 3);
-        (Color color, int size) setPolygon = (Color.Red, 1);
-        (Color color, int size) setCurve = (Color.Orange, 1);
-        (Color color, int size) setBezier = (Color.Green, 1);
-        (Color color, int size) setFillCurve = (Color.Blue, 1);
 
         private readonly string[] title = { "Цвет пера", "Размер пера" };
-        public Parametrs()
+        public Parametrs(DrawSetting[] settings)
         {
+            pointsSet = settings ?? GetDefaultSettings();
             int delta = 5;
             int heightPanel = 90;
             colorsPoint = GetPenColors();
@@ -66,22 +87,31 @@ namespace Actions
 
             ComboBox colorPoint = new ComboBox();
             colorPoint.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
+            
             colorPoint.DataSource = colorsPoint;
+            //colorPoint.Items.AddRange(GetPenColors());
+            //if (colorPoint.Items.Count != 0)
+            //{
+            //    colorPoint.SelectedIndex = SetStartValue(pointsSet[0].color);
+            //}
+            //; // SetStartValue(pointsSet[0].color);
             colorPoint.MaxDropDownItems = 15;
             colorPoint.DropDownStyle = ComboBoxStyle.DropDownList;
 
             
+            
 
-            TextBox sizePoint = new TextBox() { Text = setPoint.Item2.ToString()};
+
+            TextBox sizePoint = new TextBox() { Text = pointsSet[0].size.ToString()};
             sizePoint.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
                 
             
-            Label Point = new Label() { Text = "Цвет пера"};
+            Label Point = new Label() { Text = title[0] };
             Point.SetBounds(delta, lblPoint.Bottom + delta, ClientSize.Width /4, colorPoint.Height);
             Point.TextAlign = ContentAlignment.MiddleLeft;
 
-            Label lbl2Point = new Label() { Text = "Разер пера" };
+            Label lbl2Point = new Label() { Text = title[1] };
             lbl2Point.SetBounds(delta, Point.Height *2 + delta , Point.Width, colorPoint.Height);
             lbl2Point.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -97,7 +127,7 @@ namespace Actions
             pPoint.Controls.Add(sizePoint);
             pPoint.Controls.Add(lblPoint);
             pPoint.Controls.Add(colorPoint);
-
+            this.Load += Parametrs_Load;
             #endregion
 
             #region Curve
@@ -117,8 +147,8 @@ namespace Actions
             colorCurve.DropDownStyle = ComboBoxStyle.DropDownList;
             
 
-
-            TextBox sizeCurve = new TextBox() { Text = setCurve.Item2.ToString() };
+            
+            TextBox sizeCurve = new TextBox() { Text = pointsSet[2].size.ToString() };
             sizeCurve.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
 
@@ -162,7 +192,7 @@ namespace Actions
             
 
 
-            TextBox sizeBezier = new TextBox() { Text = setBezier.Item2.ToString() };
+            TextBox sizeBezier = new TextBox() { Text = pointsSet[3].size.ToString() };
             sizeBezier.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
 
@@ -204,9 +234,7 @@ namespace Actions
             colorPolygon.MaxDropDownItems = 15;
             colorPolygon.DropDownStyle = ComboBoxStyle.DropDownList;
            
-
-
-            TextBox sizePolygon = new TextBox() { Text = setPolygon.Item2.ToString() };
+            TextBox sizePolygon = new TextBox() { Text = pointsSet[1].size.ToString() };
             sizePolygon.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
 
@@ -223,13 +251,6 @@ namespace Actions
             examplePolygon = new Label();
             examplePolygon.BorderStyle = BorderStyle.FixedSingle;
             examplePolygon.SetBounds(colorPoint.Right + delta, colorPoint.Top, pPoint.ClientSize.Width - Point.Width - colorPoint.Width - 8 * delta, lbl2Point.Bottom - Point.Top);
-
-
-
-            
-
-
-
 
             pPolygon.Controls.Add(examplePolygon);
             pPolygon.Controls.Add(lbl1Polygon);
@@ -256,7 +277,7 @@ namespace Actions
             
 
 
-            TextBox sizeFilledCurve = new TextBox() { Text = setFillCurve.Item2.ToString() };
+            TextBox sizeFilledCurve = new TextBox() { Text = pointsSet[4].size.ToString() };
             sizeFilledCurve.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
 
@@ -341,7 +362,27 @@ namespace Actions
             #endregion
         }
 
-        
+        private int SetStartValue(Color color)
+        {
+            int k = Array.FindIndex(colorsPoint, x => Color.FromName(x) == color);
+            return k;
+        }
+
+
+        /// <summary>
+        /// Получение настроек отрисовки по умолчанию.
+        /// </summary>
+        private DrawSetting[] GetDefaultSettings()
+        {
+            return new DrawSetting[]
+                        {
+                          new DrawSetting(Color.Black, 3, LineType.Point),
+                          new DrawSetting(Color.Red, 1, LineType.Curve),
+                          new DrawSetting(Color.Orange, 1,LineType.Bezier),
+                          new DrawSetting(Color.Green, 1, LineType.Polygon),
+                          new DrawSetting(Color.Blue, 1, LineType.FilledCurve)
+                        };
+        }
 
         /// <summary>
         /// Установка толщины рисования инструмента для объекта отрисовки.
@@ -358,29 +399,29 @@ namespace Actions
             }
             else
             {
-                valueSize = (int.TryParse(temp.Text, out int value)) ? (value < 1 ? 1 : value) : 1;
+                valueSize = (int.TryParse(temp.Text, out int value)) ? value : 1;
             }
             
             switch (obj.Item1)
             {
                 case LineType.Point:
-                    setPoint.size = valueSize;
+                    pointsSet[0].size = valueSize;
                     obj.Item2.Tag = LineType.Point;
                     break;
                 case LineType.Curve:
-                    setCurve.size = valueSize;
+                    pointsSet[1].size = valueSize;
                     obj.Item2.Tag = LineType.Curve;
                     break;
                 case LineType.Bezier:
-                    setBezier.size = valueSize;
+                    pointsSet[2].size = valueSize;
                     obj.Item2.Tag = LineType.Bezier;
                     break;
                 case LineType.Polygon:
-                    setPolygon.size = valueSize;
+                    pointsSet[3].size = valueSize;
                     obj.Item2.Tag = LineType.Polygon;
                     break;
                 case LineType.FilledCurve:
-                    setFillCurve.size = valueSize;
+                    pointsSet[4].size = valueSize;
                     obj.Item2.Tag = LineType.FilledCurve;
                     break;
                 default:
@@ -404,33 +445,35 @@ namespace Actions
                 switch (k.type)
                 {
                     case LineType.Point:
+                        //По имеющемуся цвету установить SelectIndex
+                        
                         index = t.SelectedIndex;
                         temp = Color.FromName(colorsPoint[index]);
-                        setPoint.color = temp;
+                        pointsSet[0].color = temp;
                         paintObj.Tag = LineType.Point;
                         break;
                     case LineType.Curve:
                         index = t.SelectedIndex;
                         temp = Color.FromName(colorsCurve[index]);
-                        setCurve.color = temp;
+                        pointsSet[1].color = temp;
                         paintObj.Tag = LineType.Curve;
                         break;
                     case LineType.Bezier:
                         index = t.SelectedIndex;
                         temp = Color.FromName(colorsBezie[index]);
-                        setBezier.color = temp;
+                        pointsSet[2].color = temp;
                         paintObj.Tag = LineType.Bezier;
                         break;
                     case LineType.Polygon:
                         index = t.SelectedIndex;
                         temp = Color.FromName(colorsPolygon[index]);
-                        setPolygon.color = temp;
+                        pointsSet[3].color = temp;
                         paintObj.Tag = LineType.Polygon;
                         break;
                     case LineType.FilledCurve:
                         index = t.SelectedIndex;
                         temp = Color.FromName(colorsFillCurve[index]);
-                        setFillCurve.color = temp;
+                        pointsSet[4].color = temp;
                         paintObj.Tag = LineType.FilledCurve;
                         break;
                     default:
@@ -438,13 +481,17 @@ namespace Actions
                 }
                 paintObj.Refresh();
             }
-           
         }
         /// <summary>
         /// Отрисовка объекта рисования.
         /// </summary>
         private void ExampleDraw(object sender, PaintEventArgs e)
         {
+            if (this.Tag != null)
+            {
+                pointsSet = (DrawSetting[])this.Tag;
+            }
+
             var g = e.Graphics;
             var t = sender as Label;
             if (t.Tag != null)
@@ -452,19 +499,19 @@ namespace Actions
                 switch ((LineType)t.Tag)
                 {
                     case LineType.Point:
-                        g.FillEllipse(new SolidBrush(setPoint.color), t.ClientSize.Width / 2 - setPoint.size /2, t.ClientSize.Height/ 2 - setPoint.size / 2, setPoint.size, setPoint.size);
+                        g.FillEllipse(new SolidBrush(pointsSet[0].color), t.ClientSize.Width / 2 - pointsSet[0].size /2, t.ClientSize.Height/ 2 - pointsSet[0].size / 2, pointsSet[0].size, pointsSet[0].size);
                         break;
                     case LineType.Curve:
-                        g.DrawLine(new Pen(setCurve.color, setCurve.size), 4, t.ClientSize.Height/2, t.ClientSize.Width - 2*2, t.ClientSize.Height / 2);
+                        g.DrawLine(new Pen(pointsSet[1].color, pointsSet[1].size), 4, t.ClientSize.Height/2, t.ClientSize.Width - 2*2, t.ClientSize.Height / 2);
                         break;
                     case LineType.Bezier:
-                        g.DrawLine(new Pen(setBezier.color, setBezier.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                        g.DrawLine(new Pen(pointsSet[2].color, pointsSet[2].size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                         break;
                     case LineType.Polygon:
-                        g.DrawLine(new Pen(setPolygon.color, setPolygon.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                        g.DrawLine(new Pen(pointsSet[3].color, pointsSet[3].size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                         break;
                     case LineType.FilledCurve:
-                        g.DrawLine(new Pen(setFillCurve.color, setFillCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                        g.DrawLine(new Pen(pointsSet[4].color, pointsSet[4].size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                         break;
                 }
             }
@@ -472,33 +519,104 @@ namespace Actions
             {
                 if (t == examplePoint)
                 {
-                    g.FillEllipse(new SolidBrush(setPoint.color),t.ClientSize.Width/2 - setPoint.size/2, t.ClientSize.Height / 2 - setPoint.size / 2, setPoint.size, setPoint.size);
+                    g.FillEllipse(new SolidBrush(pointsSet[0].color),t.ClientSize.Width/2 - pointsSet[0].size /2, t.ClientSize.Height / 2 - pointsSet[0].size / 2, pointsSet[0].size, pointsSet[0].size);
                 }
                 else if (t == exampleCurve)
                 {
-                    g.DrawLine(new Pen(setFillCurve.color, setCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                    g.DrawLine(new Pen(pointsSet[2].color, pointsSet[2].size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                 }
                 else if (t == exampleBezier)
                 {
-                    g.DrawLine(new Pen(setBezier.color, setBezier.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                    g.DrawLine(new Pen(pointsSet[3].color, pointsSet[3].size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                 }
                 else if (t == examplePolygon)
                 {
-                    g.DrawLine(new Pen(setPolygon.color, setPolygon.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                    g.DrawLine(new Pen(pointsSet[1].color, pointsSet[1].size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                 }
             
                 else if (t == exampleFilledCurve)
                 {
-                    g.DrawLine(new Pen(setFillCurve.color, setFillCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                    g.DrawLine(new Pen(pointsSet[4].color, pointsSet[4].size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                 }
             }
         }
         private string[] GetPenColors()
         {
-            
             var t = Enum.GetNames(typeof(KnownColor));
+            Array.Sort(t);
             return t;
         }
-        
+        /// <summary>
+        /// Получение настроек для отрисовки.
+        /// </summary>
+        /// <returns>Array с настройками.</returns>
+        public DrawSetting [] GetSettingsForDrawing()
+        {
+            return pointsSet ?? null;
+        }
+
+        private void Parametrs_Load(object sender, EventArgs e)
+        {
+            var t = sender as Parametrs;
+            foreach (var item in t.Controls)
+            {
+                if (item is Panel obj)
+                {
+                    foreach (var combo in obj.Controls)
+                    {
+                        if (combo is ComboBox box)
+                        {
+                            var k = (LineType)((ValueTuple<LineType, Label>)box.Tag).Item1;
+                            switch (k)
+                            {
+                                case LineType.Point:
+                                    box.SelectedIndex = SetStartValue(pointsSet[0].color);
+
+                                    break;
+                                case LineType.Curve:
+                                    box.SelectedIndex = SetStartValue(pointsSet[1].color);
+                                    break;
+                                case LineType.Bezier:
+                                    box.SelectedIndex = SetStartValue(pointsSet[2].color);
+                                    break;
+                                case LineType.Polygon:
+                                    box.SelectedIndex = SetStartValue(pointsSet[3].color);
+                                    break;
+                                case LineType.FilledCurve:
+                                    box.SelectedIndex = SetStartValue(pointsSet[4].color);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        if (combo is TextBox text)
+                        {
+                            var k = (LineType)((ValueTuple<LineType, Label>)text.Tag).Item1;
+                            switch (k)
+                            {
+                                case LineType.Point:
+                                    text.Text = pointsSet[0].size.ToString();
+                                    break;
+                                case LineType.Curve:
+                                    text.Text = pointsSet[1].size.ToString();
+                                    break;
+                                case LineType.Bezier:
+                                    text.Text = pointsSet[2].size.ToString();
+                                    break;
+                                case LineType.Polygon:
+                                    text.Text = pointsSet[3].size.ToString();
+                                    break;
+                                case LineType.FilledCurve:
+                                    text.Text = pointsSet[4].size.ToString();
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
+

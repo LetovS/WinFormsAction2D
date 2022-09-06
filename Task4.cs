@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using System.Drawing;
 using System.Collections.Generic;
+using static Actions.Parametrs;
 
 namespace Actions
 {
@@ -42,7 +43,7 @@ namespace Actions
             /// </summary>
             yD
         }
-
+        private DrawSetting[] pointsSet;
         /// <summary>
         /// Коллекция точек.
         /// </summary>
@@ -82,6 +83,7 @@ namespace Actions
         #endregion
         public Task4()
         {
+            pointsSet = new Parametrs(null).GetSettingsForDrawing();
             points = new List<Point>();
             flags = new List<bool>();
             p = new PictureBox();
@@ -101,15 +103,11 @@ namespace Actions
             Button addPoint = new Button() { Text = "Точки" };
             addPoint.SetBounds(INDENT, INDENT, btnWidth, btnHeight);
             addPoint.Tag = 1;
-            addPoint.Click += (o, e) => { editPoints = !editPoints; (o as Button).FlatStyle = (editPoints) ? FlatStyle.Popup : FlatStyle.Standard; };
+            addPoint.Click += (o, e) => { editPoints = !editPoints; (o as Button).FlatStyle = (editPoints) ? FlatStyle.Popup : FlatStyle.Standard; DrawLineType(o, e); };
 
             Button param = new Button() { Text = "Параметры" };
             param.SetBounds(INDENT, addPoint.Bottom + INDENT, btnWidth, btnHeight);
             param.Click += SetParams;
-
-
-
-
 
             Button move = new Button() { Text = "Движение" };
             move.SetBounds(INDENT, param.Bottom + INDENT, btnWidth, btnHeight);
@@ -188,14 +186,17 @@ namespace Actions
             this.Controls.Add(bufferDraw);
             #endregion
         }
-
+        /// <summary>
+        /// Получение настроек для отрисовки.
+        /// </summary>
         private void SetParams(object sender, EventArgs e)
         {
-            Parametrs param = new Parametrs();
+            Parametrs param = new Parametrs(pointsSet);
+            
             this.Visible = false;
             if (param.ShowDialog() == DialogResult.OK)
             {
-                //Получить цвет.размер для лсоздания кистей и ручек
+                pointsSet = param.GetSettingsForDrawing();
             }
             this.Visible = true;
         }
@@ -403,33 +404,27 @@ namespace Actions
         private void DrawSomethings(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
-            Pen pen = Pens.Green;
+            
             if (flagMOves)
             {
                 g.FillEllipse(Brushes.Red, movepoint.X, movepoint.Y, 8, 8);
             }
-            if (points.Count > 0)
-            {
-                foreach (var point in points)
-                {
-                    g.FillEllipse(Brushes.Green, point.X, point.Y, 8, 8);
-                }
-            }
+            
             if ((sender as PictureBox).Tag != null)
             {
                 switch ((LineType)(sender as PictureBox).Tag)
                 {
                     case LineType.Point:
                         //TODO проработать,если не нужно постоянное отображение точек.
+                        foreach (var item in points)
+                        {
+                            g.FillEllipse(new SolidBrush(pointsSet[0].color), item.X, item.Y, pointsSet[0].size, pointsSet[0].size);
+                        }
                         break;
                     case LineType.Curve:
                         if (points.Count > 2)
                         {
-                            //foreach (var point in points)
-                            //{
-                            //    g.FillEllipse(Brushes.Green, point.X, point.Y, 8, 8);
-                            //}
-                            g.DrawClosedCurve(Pens.Blue, points.ToArray());
+                            g.DrawClosedCurve(new Pen(pointsSet[1].color, pointsSet[1].size), points.ToArray());
                             msg.Text = "";
                         }
                         else
@@ -439,7 +434,7 @@ namespace Actions
                         break;
                     case LineType.Bezier:
                         // 4 points need
-                        
+                        // запилить чтобы лишнии точки выделялись красным 
                         if (points.Count % 3 - 1 == 0)
                         {
                             msg.Text = "";
@@ -448,14 +443,51 @@ namespace Actions
                             {
                                 if (i % 3 == 0)
                                 {
-                                    g.FillEllipse(Brushes.Green, points[i].X, points[i].Y, 8, 8);
+                                    g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X, points[i].Y, pointsSet[0].size, pointsSet[0].size);
                                 }
+                                else
+                                    g.FillEllipse(new SolidBrush(Color.Green), points[i].X, points[i].Y, pointsSet[0].size, pointsSet[0].size);
                             }
 
-                            g.DrawBeziers(Pens.Red, points.ToArray());
+                            g.DrawBeziers(new Pen(pointsSet[2].color, pointsSet[2].size), points.ToArray());
                         }
                         else
                         {
+                            int val = points.Count % 3 - 1;
+                            if (val == 1 || val == -1)
+                            {
+                                if (val == 1)
+                                {
+                                    for (int i = 0; i < points.Count; i++)
+                                    {
+                                        if (i < points.Count - 1)
+                                        {
+                                            g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X, points[i].Y, pointsSet[0].size, pointsSet[0].size);
+                                        }
+                                        else
+                                        {
+                                            g.FillEllipse(new SolidBrush(Color.Red), points[i].X, points[i].Y, pointsSet[0].size + 2, pointsSet[0].size + 2);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < points.Count; i++)
+                                    {
+                                        if (i < points.Count - 2)
+                                        {
+                                            g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X, points[i].Y, pointsSet[0].size, pointsSet[0].size);
+                                        }
+                                        else
+                                        {
+                                            g.FillEllipse(new SolidBrush(Color.Red), points[i].X, points[i].Y, pointsSet[0].size + 2, pointsSet[0].size + 2);
+                                        }
+                                    }
+                                }
+                                
+                            }
+
+                            
                             msg.Text = $"Error 404";
                         }
                         //TODO если точек больше 4ех
@@ -464,7 +496,7 @@ namespace Actions
                         // 2 points need
                         if (points.Count > 2)
                         {
-                            g.DrawPolygon(pen, points.ToArray());
+                            g.DrawPolygon(new Pen(pointsSet[3].color, pointsSet[3].size), points.ToArray());
                             msg.Text = "";
                         }
                         else
@@ -477,11 +509,7 @@ namespace Actions
                         // 3 points need
                         if (points.Count > 2)
                         {
-                            //foreach (var point in points)
-                            //{
-                            //    g.FillEllipse(Brushes.Green, point.X, point.Y, 8, 8);
-                            //}
-                            g.FillClosedCurve(Brushes.Green, points.ToArray());
+                            g.FillClosedCurve(new SolidBrush(pointsSet[4].color), points.ToArray());
                             msg.Text = "";
                         }
                         else
@@ -492,7 +520,16 @@ namespace Actions
                     default:
                         break;
                 }
+                if (points.Count > 0 && (LineType)(sender as PictureBox).Tag != LineType.Bezier)
+                {
+                    foreach (var point in points)
+                    {
+                        g.FillEllipse(new SolidBrush(pointsSet[0].color), point.X, point.Y, pointsSet[0].size, pointsSet[0].size);
+                    }
+                }
             }
+            
+            
         }
         /// <summary>
         /// Обработка нажатий кнопок. 

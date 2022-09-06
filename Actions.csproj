@@ -54,6 +54,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Parametrs.resx">
+      <DependentUpon>Parametrs.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Task4.resx">
       <DependentUpon>Task4.cs</DependentUpon>
     </EmbeddedResource>
