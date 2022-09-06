@@ -24,15 +24,12 @@ namespace Actions
 
 
         public (Color color, int size) setPoint = (Color.Black, 3);
-        (Color color, int size) setPolygon = (Color.Black, 3);
-        (Color color, int size) setCurve = (Color.Black, 3);
-        (Color color, int size) setBezier = (Color.Black, 3);
-        (Color color, int size) setFillCurve = (Color.Black, 3);
+        (Color color, int size) setPolygon = (Color.Red, 1);
+        (Color color, int size) setCurve = (Color.Orange, 1);
+        (Color color, int size) setBezier = (Color.Green, 1);
+        (Color color, int size) setFillCurve = (Color.Blue, 1);
 
-        enum TypeData { Point, Other}
-
-        int index = 0;
-
+        string[] title = { "Цвет пера", "Размер пера" };
         public Parametrs()
         {
             
@@ -77,11 +74,11 @@ namespace Actions
             
                 
             
-            Label Point = new Label() { Text = "Тип пера"};
+            Label Point = new Label() { Text = "Цвет пера"};
             Point.SetBounds(delta, lblPoint.Bottom + delta, ClientSize.Width /4, colorPoint.Height);
             Point.TextAlign = ContentAlignment.MiddleLeft;
 
-            Label lbl2Point = new Label() { Text = "Разер точки" };
+            Label lbl2Point = new Label() { Text = "Разер пера" };
             lbl2Point.SetBounds(delta, Point.Height *2 + delta , Point.Width, colorPoint.Height);
             lbl2Point.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -118,16 +115,16 @@ namespace Actions
             
 
 
-            TextBox sizeCurve = new TextBox() { Text = setPoint.Item2.ToString() };
+            TextBox sizeCurve = new TextBox() { Text = setCurve.Item2.ToString() };
             sizeCurve.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
 
 
-            Label lbl1Curve = new Label() { Text = "Тип пера" };
+            Label lbl1Curve = new Label() { Text = title[0] };
             lbl1Curve.SetBounds(delta, lblPoint.Bottom + delta, ClientSize.Width / 4, colorPoint.Height);
             lbl1Curve.TextAlign = ContentAlignment.MiddleLeft;
 
-            Label lbl2Curve = new Label() { Text = "Разер точки" };
+            Label lbl2Curve = new Label() { Text = title[1] };
             lbl2Curve.SetBounds(delta, Point.Height * 2 + delta, Point.Width, colorPoint.Height);
             lbl2Curve.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -162,16 +159,16 @@ namespace Actions
             
 
 
-            TextBox sizeBezier = new TextBox() { Text = setPoint.Item2.ToString() };
+            TextBox sizeBezier = new TextBox() { Text = setBezier.Item2.ToString() };
             sizeBezier.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
 
 
-            Label lbl1Bezier = new Label() { Text = "Тип пера" };
+            Label lbl1Bezier = new Label() { Text = title[0] };
             lbl1Bezier.SetBounds(delta, lblPoint.Bottom + delta, ClientSize.Width / 4, colorPoint.Height);
             lbl1Bezier.TextAlign = ContentAlignment.MiddleLeft;
 
-            Label lbl2Bezier = new Label() { Text = "Разер точки" };
+            Label lbl2Bezier = new Label() { Text = title[1] };
             lbl2Bezier.SetBounds(delta, Point.Height * 2 + delta, Point.Width, colorPoint.Height);
             lbl2Bezier.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -206,16 +203,16 @@ namespace Actions
            
 
 
-            TextBox sizePolygon = new TextBox() { Text = setPoint.Item2.ToString() };
+            TextBox sizePolygon = new TextBox() { Text = setPolygon.Item2.ToString() };
             sizePolygon.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
 
 
-            Label lbl1Polygon = new Label() { Text = "Тип пера" };
+            Label lbl1Polygon = new Label() { Text = title[0] };
             lbl1Polygon.SetBounds(delta, lblPoint.Bottom + delta, ClientSize.Width / 4, colorPoint.Height);
             lbl1Polygon.TextAlign = ContentAlignment.MiddleLeft;
 
-            Label lbl2Polygon = new Label() { Text = "Разер точки" };
+            Label lbl2Polygon = new Label() { Text = title[1] };
             lbl2Polygon.SetBounds(delta, Point.Height * 2 + delta, Point.Width, colorPoint.Height);
             lbl2Polygon.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -256,16 +253,16 @@ namespace Actions
             
 
 
-            TextBox sizeFilledCurve = new TextBox() { Text = setPoint.Item2.ToString() };
+            TextBox sizeFilledCurve = new TextBox() { Text = setFillCurve.Item2.ToString() };
             sizeFilledCurve.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
             
 
 
-            Label lbl1FilledCurve = new Label() { Text = "Тип пера" };
+            Label lbl1FilledCurve = new Label() { Text = title[0] };
             lbl1FilledCurve.SetBounds(delta, lblPoint.Bottom + delta, ClientSize.Width / 4, colorPoint.Height);
             lbl1FilledCurve.TextAlign = ContentAlignment.MiddleLeft;
 
-            Label lbl2FilledCurve = new Label() { Text = "Разер точки" };
+            Label lbl2FilledCurve = new Label() { Text = title[1] };
             lbl2FilledCurve.SetBounds(delta, Point.Height * 2 + delta, Point.Width, colorPoint.Height);
             lbl2FilledCurve.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -289,7 +286,6 @@ namespace Actions
 
             sizePoint.Tag = (LineType.Point, examplePoint);
             colorPoint.Tag = (LineType.Point, examplePoint);
-            colorPoint.Name = "colorPoint";
             colorPoint.SelectedIndexChanged += ChangeToolColor;
             sizePoint.TextChanged += ChangeToolSize;
             
@@ -352,7 +348,16 @@ namespace Actions
             var temp = (sender as TextBox);
             
             var obj = (ValueTuple<LineType, Label>)temp.Tag;
-            int valueSize = (int.TryParse(temp.Text, out int value)) ? (value < 3 ? 3 : value) : 3;
+            int valueSize;
+            if (obj.Item1 == LineType.Point)
+            {
+                valueSize = (int.TryParse(temp.Text, out int value)) ? (value < 3 ? 3 : value) : 3;
+            }
+            else
+            {
+                valueSize = (int.TryParse(temp.Text, out int value)) ? (value < 1 ? 1 : value) : 1;
+            }
+            
             switch (obj.Item1)
             {
                 case LineType.Point:
@@ -464,24 +469,24 @@ namespace Actions
             {
                 if (t == examplePoint)
                 {
-                    g.FillEllipse(new SolidBrush(Color.FromName(colorsPoint[index])),t.ClientSize.Width/2 - setPoint.size/2, t.ClientSize.Height / 2 - setPoint.size / 2, setPoint.size, setPoint.size);
+                    g.FillEllipse(new SolidBrush(setPoint.color),t.ClientSize.Width/2 - setPoint.size/2, t.ClientSize.Height / 2 - setPoint.size / 2, setPoint.size, setPoint.size);
                 }
                 else if (t == exampleCurve)
                 {
-                    g.DrawLine(new Pen(Color.FromName(colorsCurve[index]), setCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                    g.DrawLine(new Pen(setFillCurve.color, setCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                 }
                 else if (t == exampleBezier)
                 {
-                    g.DrawLine(new Pen(Color.FromName(colorsBezie[index]), setBezier.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                    g.DrawLine(new Pen(setBezier.color, setBezier.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                 }
                 else if (t == examplePolygon)
                 {
-                    g.DrawLine(new Pen(Color.FromName(colorsPolygon[index]), setPolygon.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                    g.DrawLine(new Pen(setPolygon.color, setPolygon.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                 }
             
                 else if (t == exampleFilledCurve)
                 {
-                    g.DrawLine(new Pen(Color.FromName(colorsFillCurve[index]), setFillCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
+                    g.DrawLine(new Pen(setFillCurve.color, setFillCurve.size), 4, t.ClientSize.Height / 2, t.ClientSize.Width - 2 * 2, t.ClientSize.Height / 2);
                 }
             }
         }
