@@ -74,11 +74,13 @@ namespace Actions
         /// Оповещение пользователя.
         /// </summary>
         private Label msg;
+
+        private Point movepoint;
+
+        private CheckBox bufferDraw;
         #endregion
         public Task4()
         {
-            //TODO 
-            
             points = new List<Point>();
             flags = new List<bool>();
             p = new PictureBox();
@@ -143,7 +145,7 @@ namespace Actions
             msg.SetBounds(INDENT, fiilCurve.Bottom + INDENT, btnWidth, btnHeight - 10);
             msg.TextAlign = ContentAlignment.MiddleCenter;
             
-            CheckBox bufferDraw = new CheckBox() { Text = "Buffer выкл" };
+            bufferDraw = new CheckBox() { Text = "Buffer выкл" };
             bufferDraw.SetBounds(INDENT, msg.Bottom + 4, btnWidth, 20);
             
             bufferDraw.Click += (o, e) =>
@@ -204,10 +206,7 @@ namespace Actions
             if (flagMOves)
             {
                 p.CreateGraphics().FillEllipse(Brushes.Red, e.X, e.Y, 10, 10);
-                Point temp = points[(int)msg.Tag];
-                temp.X += e.X;
-                temp.Y += e.Y;                
-                points[(int)msg.Tag] = temp;
+                movepoint = new Point(e.X, e.Y);
                 p.Refresh();
             }
         }
@@ -219,10 +218,8 @@ namespace Actions
             if (flagMOves)
             {
                 flagMOves = false;
-                Point temp = points[(int)msg.Tag];
-                temp.X = e.X;
-                temp.Y = e.Y;
-                points[(int)msg.Tag] = temp;
+                points[(int)msg.Tag] = movepoint;
+                movepoint = new Point(0,0);
                 msg.Text = "Перемещена";
                 p.Refresh();
             }
@@ -238,6 +235,7 @@ namespace Actions
                 {
                     msg.Tag = index;
                     msg.Text = "Перемещается " + (index + 1) + " точка";
+                    movepoint = new Point(e.X, e.Y);
                     flagMOves = true;
                 }
                 else
@@ -262,8 +260,6 @@ namespace Actions
                 p.Refresh();
 
             }
-            
-            
         }
         /// <summary>
         /// Проверка точек.
@@ -293,13 +289,6 @@ namespace Actions
         {
             switch (e.KeyCode)
             {
-                case Keys.Up:
-                case Keys.Down:
-                case Keys.Right:
-                case Keys.Left:
-                    
-                    e.Handled = true;
-                    break;
                 case Keys.Escape:
                     (sender as Task4).p.CreateGraphics().Clear(baseBackColor);
                     points.Clear();
@@ -414,6 +403,10 @@ namespace Actions
         {
             var g = e.Graphics;
             Pen pen = Pens.Green;
+            if (flagMOves)
+            {
+                g.FillEllipse(Brushes.Red, movepoint.X, movepoint.Y, 8, 8);
+            }
             if (points.Count > 0)
             {
                 foreach (var point in points)
@@ -537,6 +530,9 @@ namespace Actions
                 case Keys.Oemplus:
                     this.Text = "Нажали "+ keyData;
                     return false;
+                case Keys.B:
+                    bufferDraw.Checked = !bufferDraw.Checked;
+                    return true;
                 default:
                     return true;
             }
@@ -546,7 +542,6 @@ namespace Actions
         /// </summary>
         private void HandMoveObj(Keys keyData)
         {
-            
             switch (keyData)
             {
                 case Keys.Up:
