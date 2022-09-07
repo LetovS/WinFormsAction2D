@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Forms;
 using static Actions.Task4;
 //using System.Windows.Controls;
@@ -16,13 +19,11 @@ namespace Actions
         private Label exampleBezier;
         private Label examplePolygon;
         private Label exampleFilledCurve;
-
-        string[] colorsPoint;
-        string[] colorsCurve;
-        string[] colorsPolygon;
-        string[] colorsBezie;
-        string[] colorsFillCurve;
-
+        
+        [Serializable]
+        /// <summary>
+        /// Набор настроек для отрисовки объектов.
+        /// </summary>
         public struct DrawSetting
         {
             /// <summary>
@@ -45,32 +46,18 @@ namespace Actions
                 return $"Цвет: {color.Name} , Размер:{size}";
             }
         }
+
+        /// <summary>
+        /// Настройки для всех объектов.
+        /// </summary>
         DrawSetting[] pointsSet;
-        //    { new DrawSetting(Color.Black, 3,"Point"),
-        //      new DrawSetting(Color.Red, 1, "Curve"),
-        //      new DrawSetting(Color.Orange, 1, "Bezier"),
-        //      new DrawSetting(Color.Green, 1, "Polygon"),
-        //      new DrawSetting(Color.Blue, 1, "FilledCurve")
-        //    };
-        
-
-
         private readonly string[] title = { "Цвет пера", "Размер пера" };
-        public Parametrs(DrawSetting[] settings)
+        public Parametrs()
         {
-            pointsSet = settings ?? GetDefaultSettings();
-            int delta = 5;
-            int heightPanel = 90;
-            colorsPoint = GetPenColors();
-            colorsCurve = GetPenColors();
-            colorsPolygon = GetPenColors();
-            colorsBezie = GetPenColors();
-            colorsFillCurve = GetPenColors();
-            if (colorsPoint == colorsCurve)
-            {
-                int k = 9;
-            }
-
+            pointsSet = LoadData() ?? GetDefaultSettings();
+            int delta = 5; // Отступы для заполнений панелей
+            int heightPanel = 90; // Ширина панелей
+            
             this.Size = new Size(350, 600);
             this.Text = "Settings";
             this.MaximizeBox = false;
@@ -93,14 +80,10 @@ namespace Actions
 
             ComboBox colorPoint = new ComboBox();
             colorPoint.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            
-            colorPoint.DataSource = colorsPoint;
-            //colorPoint.Items.AddRange(GetPenColors());
-            //if (colorPoint.Items.Count != 0)
-            //{
-            //    colorPoint.SelectedIndex = SetStartValue(pointsSet[0].color);
-            //}
-            //; // SetStartValue(pointsSet[0].color);
+
+            colorPoint.DataSource = GetPenColors();//colorsPoint;
+
+
             colorPoint.MaxDropDownItems = 15;
             colorPoint.DropDownStyle = ComboBoxStyle.DropDownList;
 
@@ -148,7 +131,7 @@ namespace Actions
 
             ComboBox colorCurve = new ComboBox();
             colorCurve.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorCurve.DataSource = colorsCurve;
+            colorCurve.DataSource = GetPenColors();//colorsCurve;
             colorCurve.MaxDropDownItems = 15;
             colorCurve.DropDownStyle = ComboBoxStyle.DropDownList;
             
@@ -192,7 +175,7 @@ namespace Actions
             lblBezier.SetBounds(delta, 0, ClientSize.Width, 20);
             ComboBox colorBezier = new ComboBox();
             colorBezier.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorBezier.DataSource = colorsBezie;
+            colorBezier.DataSource = GetPenColors();//colorsBezie;
             colorBezier.MaxDropDownItems = 15;
             colorBezier.DropDownStyle = ComboBoxStyle.DropDownList;
             
@@ -236,7 +219,7 @@ namespace Actions
 
             ComboBox colorPolygon = new ComboBox();
             colorPolygon.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorPolygon.DataSource = colorsPolygon;
+            colorPolygon.DataSource = GetPenColors();//colorsPolygon;
             colorPolygon.MaxDropDownItems = 15;
             colorPolygon.DropDownStyle = ComboBoxStyle.DropDownList;
            
@@ -277,7 +260,7 @@ namespace Actions
 
             ComboBox colorFilledCurve = new ComboBox();
             colorFilledCurve.SetBounds(ClientSize.Width / 3, lblPoint.Bottom + delta, 110, 40);
-            colorFilledCurve.DataSource = colorsFillCurve;
+            colorFilledCurve.DataSource = GetPenColors();//colorsFillCurve;
             colorFilledCurve.MaxDropDownItems = 15;
             colorFilledCurve.DropDownStyle = ComboBoxStyle.DropDownList;
             
@@ -285,7 +268,7 @@ namespace Actions
 
             TextBox sizeFilledCurve = new TextBox() { Text = pointsSet[4].size.ToString() };
             sizeFilledCurve.SetBounds(colorPoint.Left, colorPoint.Bottom + delta, colorPoint.Width, colorPoint.Height);
-            
+            sizeFilledCurve.Enabled = false;
 
 
             Label lbl1FilledCurve = new Label() { Text = title[0] };
@@ -344,10 +327,13 @@ namespace Actions
             sizeFilledCurve.Tag = (LineType.FilledCurve, exampleFilledCurve);
             colorFilledCurve.Tag = (LineType.FilledCurve, exampleFilledCurve);
             #endregion
+
             Button ok = new Button() { Text = "OK"};
             ok.SetBounds(ClientSize.Width / 2 - 40, ClientSize.Height - 10*delta, 80, 40);
             ok.DialogResult = DialogResult.OK;
             ok.Click += (o, e) => { this.Close(); };
+            this.FormClosing += (o, e) => { (o as Parametrs).SaveData(); };
+
             #region Add elements to Control Form
             this.Controls.Add(lbl);
             this.Controls.Add(ok);
@@ -359,9 +345,10 @@ namespace Actions
             #endregion
         }
 
-        private int SetStartValue(Color color)
+        private int SetStartValue(Color color, ComboBox box)
         {
-            int k = Array.FindIndex(colorsPoint, x => Color.FromName(x) == color);
+            string[] temp = box.Items.Cast<string>().ToArray();
+            int k = Array.FindIndex(temp, x => Color.FromName(x) == color);
             return k;
         }
 
@@ -377,7 +364,7 @@ namespace Actions
                           new DrawSetting(Color.Red, 1, LineType.Curve),
                           new DrawSetting(Color.Orange, 1,LineType.Bezier),
                           new DrawSetting(Color.Green, 1, LineType.Polygon),
-                          new DrawSetting(Color.Blue, 1, LineType.FilledCurve)
+                          new DrawSetting(Color.Blue, 4, LineType.FilledCurve)
                         };
         }
 
@@ -445,31 +432,31 @@ namespace Actions
                         //По имеющемуся цвету установить SelectIndex
                         
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorsPoint[index]);
+                        temp = GetColor(index, t);
                         pointsSet[0].color = temp;
                         paintObj.Tag = LineType.Point;
                         break;
                     case LineType.Curve:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorsCurve[index]);
+                        temp = GetColor(index, t);
                         pointsSet[1].color = temp;
                         paintObj.Tag = LineType.Curve;
                         break;
                     case LineType.Bezier:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorsBezie[index]);
+                        temp = GetColor(index, t);
                         pointsSet[2].color = temp;
                         paintObj.Tag = LineType.Bezier;
                         break;
                     case LineType.Polygon:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorsPolygon[index]);
+                        temp = GetColor(index, t);
                         pointsSet[3].color = temp;
                         paintObj.Tag = LineType.Polygon;
                         break;
                     case LineType.FilledCurve:
                         index = t.SelectedIndex;
-                        temp = Color.FromName(colorsFillCurve[index]);
+                        temp = GetColor(index, t);
                         pointsSet[4].color = temp;
                         paintObj.Tag = LineType.FilledCurve;
                         break;
@@ -478,6 +465,16 @@ namespace Actions
                 }
                 paintObj.Refresh();
             }
+        }
+        /// <summary>
+        /// Получение цвета.
+        /// </summary>
+        /// <param name="index">Индекс цвета в коллекции.</param>
+        /// <param name="t">Объект с коллекцией.</param>
+        /// <returns>Color</returns>
+        private Color GetColor(int index, ComboBox t)
+        {
+            return Color.FromName(t.Items.Cast<string>().ToArray()[index]);
         }
         /// <summary>
         /// Отрисовка объекта рисования.
@@ -551,7 +548,6 @@ namespace Actions
         {
             return pointsSet ?? null;
         }
-
         private void Parametrs_Load(object sender, EventArgs e)
         {
             var t = sender as Parametrs;
@@ -567,20 +563,20 @@ namespace Actions
                             switch (k)
                             {
                                 case LineType.Point:
-                                    box.SelectedIndex = SetStartValue(pointsSet[0].color);
+                                    box.SelectedIndex = SetStartValue(pointsSet[0].color, box);
 
                                     break;
                                 case LineType.Curve:
-                                    box.SelectedIndex = SetStartValue(pointsSet[1].color);
+                                    box.SelectedIndex = SetStartValue(pointsSet[1].color, box);
                                     break;
                                 case LineType.Bezier:
-                                    box.SelectedIndex = SetStartValue(pointsSet[2].color);
+                                    box.SelectedIndex = SetStartValue(pointsSet[2].color, box);
                                     break;
                                 case LineType.Polygon:
-                                    box.SelectedIndex = SetStartValue(pointsSet[3].color);
+                                    box.SelectedIndex = SetStartValue(pointsSet[3].color, box);
                                     break;
                                 case LineType.FilledCurve:
-                                    box.SelectedIndex = SetStartValue(pointsSet[4].color);
+                                    box.SelectedIndex = SetStartValue(pointsSet[4].color, box);
                                     break;
                                 default:
                                     break;
@@ -613,6 +609,31 @@ namespace Actions
                     }
                 }
             }
+        }
+
+        private void SaveData()
+        {
+            BinaryFormatter br = new BinaryFormatter();
+            Stream sw = new FileStream("Settings.bin", FileMode.OpenOrCreate);
+            br.Serialize(sw, pointsSet);
+            sw.Close();
+        }
+        /// <summary>
+        /// Получение сохраненных настроек отрисовки
+        /// </summary>
+        /// <returns>Array DrawSetting</returns>
+        private DrawSetting[] LoadData()
+        {
+            BinaryFormatter br = new BinaryFormatter();
+            Stream sw = new FileStream("Settings.bin", FileMode.OpenOrCreate);
+            if (sw.Length == 0 )
+            {
+                sw.Close();
+                return null;
+            }
+            DrawSetting[]  temp = (DrawSetting[])br.Deserialize(sw);
+            sw.Close();
+            return temp;
         }
     }
 }

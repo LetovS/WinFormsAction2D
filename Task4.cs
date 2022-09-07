@@ -18,7 +18,7 @@ namespace Actions
         /// <summary>
         /// Список рисуемых объектов.
         /// </summary>
-        public enum LineType { Point = 1, Curve = 2, Bezier = 3, Polygon =4 , FilledCurve = 5 }
+        public enum LineType { Point = 1, Curve = 2, Bezier = 3, Polygon =4 , FilledCurve = 5, None =6 }
         /// <summary>
         /// Тип ручного перемещения объекта.
         /// </summary>
@@ -41,7 +41,9 @@ namespace Actions
             /// </summary>
             yD
         }
+        private (Timer, EventArgs) moverSet;
         private DrawSetting[] pointsSet;
+        private Keys keys;
         /// <summary>
         /// Коллекция точек.
         /// </summary>
@@ -54,37 +56,46 @@ namespace Actions
         /// Базовый цвет фона плоскости отрисовки.
         /// </summary>
         private Color baseBackColor;
-        /// <summary>
-        /// Флаг режима добавления точек.
-        /// </summary>
-        private bool editPoints = false;
+
+        private Timer timer;
+        enum TypeMover { Auto = 1, Handle, None }
         /// <summary>
         /// Флаг редактирования положения точки.
         /// </summary>
         private bool flagMOves = false;
-        /// <summary>
-        /// Плоскость рисования.
-        /// </summary>
-        private PictureBox p;
-        /// <summary>
-        /// Прорисовка объектов.
-        /// </summary>
-        private Timer timer;
+        
+        
         /// <summary>
         /// Оповещение пользователя.
         /// </summary>
         private Label msg;
-
+        /// <summary>
+        /// Координаты перемещаемой точки.
+        /// </summary>
         private Point movepoint;
-
+        /// <summary>
+        /// Использование буферизации.
+        /// </summary>
         private CheckBox bufferDraw;
+        /// <summary>
+        /// Статусы клавишь
+        /// </summary>
+        Dictionary<LineType, bool> status =
+                        new Dictionary<LineType, bool>
+                        {
+                            { LineType.Point, false },
+                            { LineType.Curve, false},
+                            { LineType.Bezier, false},
+                            { LineType.Polygon, false},
+                            { LineType.FilledCurve, false}
+                        };
         #endregion
         public Task4()
         {
-            pointsSet = new Parametrs(null).GetSettingsForDrawing();
+            pointsSet = new Parametrs().GetSettingsForDrawing();
             points = new List<Point>();
             flags = new List<bool>();
-            p = new PictureBox();
+            PictureBox p = new PictureBox();
 
             timer = new Timer();
             timer.Interval = 300;
@@ -100,8 +111,9 @@ namespace Actions
             #region Кнопоки
             Button addPoint = new Button() { Text = "Точки" };
             addPoint.SetBounds(INDENT, INDENT, btnWidth, btnHeight);
-            addPoint.Tag = 1;
-            addPoint.Click += (o, e) => { editPoints = !editPoints; (o as Button).FlatStyle = (editPoints) ? FlatStyle.Popup : FlatStyle.Standard; DrawLineType(o, e); };
+            addPoint.Tag = (LineType.Point,p);
+            addPoint.Click += DrawLineType;
+            
 
             Button param = new Button() { Text = "Параметры" };
             param.SetBounds(INDENT, addPoint.Bottom + INDENT, btnWidth, btnHeight);
@@ -114,26 +126,26 @@ namespace Actions
 
             Button clear = new Button() { Text = "Очистить"};
             clear.SetBounds(INDENT, move.Bottom + INDENT, btnWidth, btnHeight);
-            clear.Tag = p;
-            clear.Click += (o, e) => { ((o as Button).Tag as PictureBox).CreateGraphics().Clear(baseBackColor); points.Clear(); };
+            
+            clear.Click += (o, e) => { GetDrowObj().CreateGraphics().Clear(baseBackColor); points.Clear(); };
             
             Button curve = new Button() { Text = "Кривая"};
             curve.SetBounds(INDENT, clear.Bottom + INDENT, btnWidth, btnHeight);
-            curve.Tag = 2;
+            curve.Tag = (LineType.Curve, p);
             curve.Click += DrawLineType;
 
             Button bezier = new Button() { Text = "Безье"};
-            bezier.Tag = 3;
+            bezier.Tag = (LineType.Bezier, p);
             bezier.Click += DrawLineType;
             bezier.SetBounds(INDENT, curve.Bottom + INDENT, btnWidth, btnHeight);
 
             Button polygon = new Button() { Text = "Ломанная"};
-            polygon.Tag = 4;
+            polygon.Tag = (LineType.Polygon, p);
             polygon.Click += DrawLineType;
             polygon.SetBounds(INDENT, bezier.Bottom + INDENT, btnWidth, btnHeight);
 
             Button fiilCurve = new Button() { Text = "Закрашенная"};
-            fiilCurve.Tag = 5;
+            fiilCurve.Tag = (LineType.FilledCurve, p);
             fiilCurve.Click += DrawLineType;
             fiilCurve.SetBounds(INDENT, polygon.Bottom + INDENT, btnWidth, btnHeight);
 
@@ -157,17 +169,12 @@ namespace Actions
             #region Мальберт
             p.SetBounds(addPoint.Right + INDENT, INDENT, ClientSize.Width - addPoint.Width - 3 * INDENT, ClientSize.Height - 2 * INDENT);
             p.BorderStyle = BorderStyle.FixedSingle;
+            p.Tag = LineType.None;
             baseBackColor = p.BackColor;
             #endregion
 
             #region Обработчики событий
-            KeyPreview = true;
-            KeyDown += PushKeys;
-            p.Paint += DrawSomethings;
-            p.MouseDown += AddPoint;
-            p.MouseMove += Mover;
-            p.MouseUp += EndMover;
-
+            this.Load += Task4_Load;
             #endregion
 
             #region Добавление кнопок в форму
@@ -184,17 +191,37 @@ namespace Actions
             this.Controls.Add(bufferDraw);
             #endregion
         }
+
+        private void Task4_Load(object sender, EventArgs e)
+        {
+            KeyPreview = true;
+            KeyDown += PushKeys;
+            foreach (var item in (sender as Task4).Controls)
+            {
+                if (item is PictureBox p)
+                {
+                    p.Paint += DrawFigures;
+                    p.MouseDown += AddPoint;
+                    p.MouseMove += Mover;
+                    p.MouseUp += EndMover;
+                    return;
+                }
+            }
+            
+        }
+
         /// <summary>
         /// Получение настроек для отрисовки.
         /// </summary>
         private void SetParams(object sender, EventArgs e)
         {
-            Parametrs param = new Parametrs(pointsSet);
+            Parametrs param = new Parametrs();
             
             this.Visible = false;
             if (param.ShowDialog() == DialogResult.OK)
             {
                 pointsSet = param.GetSettingsForDrawing();
+                
             }
             this.Visible = true;
         }
@@ -205,9 +232,9 @@ namespace Actions
         {
             if (flagMOves)
             {
-                p.CreateGraphics().FillEllipse(Brushes.Red, e.X, e.Y, 10, 10);
+                (sender as PictureBox).CreateGraphics().FillEllipse(Brushes.Red, e.X, e.Y, 10, 10);
                 movepoint = new Point(e.X, e.Y);
-                p.Refresh();
+                (sender as PictureBox).Refresh();
             }
         }
         /// <summary>
@@ -221,7 +248,7 @@ namespace Actions
                 points[(int)msg.Tag] = movepoint;
                 movepoint = new Point(0,0);
                 msg.Text = "Перемещена";
-                p.Refresh();
+                (sender as PictureBox).Refresh();
             }
         }
         /// <summary>
@@ -229,9 +256,10 @@ namespace Actions
         /// </summary>
         private void AddPoint(object sender, MouseEventArgs e)
         {
+
             if (e.Button == MouseButtons.Left)
             {
-                if (points.Count > 0 && CheckPoint(e, out int index))
+                if (points.Count > 0 && CheckPoint(e, out int index) && status[LineType.Point])
                 {
                     msg.Tag = index;
                     msg.Text = "Перемещается " + (index + 1) + " точка";
@@ -240,14 +268,14 @@ namespace Actions
                 }
                 else
                 {
-                    if (editPoints)
+                    if (status[LineType.Point])
                     {
                         points.Add(new Point(e.X, e.Y));
                         flags.Add(true);
-                        p.Refresh();
                     }
+                    
                 }
-                
+                (sender as PictureBox).Refresh();
             }
             else if (e.Button == MouseButtons.Right)
             {
@@ -257,7 +285,7 @@ namespace Actions
                     flags.RemoveAt(index);
                     msg.Text = "Удалена " + (index + 1) + " точка";
                 }
-                p.Refresh();
+                (sender as PictureBox).Refresh();
 
             }
         }
@@ -287,14 +315,20 @@ namespace Actions
         /// </summary>
         private void PushKeys(object sender, KeyEventArgs e)
         {
+            
             switch (e.KeyCode)
             {
                 case Keys.Escape:
-                    (sender as Task4).p.CreateGraphics().Clear(baseBackColor);
-                    points.Clear();
-                    e.Handled = true;
+                    PictureBox drawObj = GetDrowObj();
+                    if (drawObj!=null)
+                    {
+                        drawObj.CreateGraphics().Clear(baseBackColor);
+                        points.Clear();
+                        e.Handled = true;
+                    }
                     break;
                 case Keys.Space:
+                    timer.Tag = TypeMover.Auto;
                     timer.Enabled = !timer.Enabled;
                     e.Handled = true;
                     break;
@@ -304,18 +338,19 @@ namespace Actions
                     {
                         timer.Interval += 10;
                         msg.Text = $" Скорость: {timer.Interval} мс";
-                       
                     }
                     e.Handled = true;
                     return;
                 case Keys.Subtract:
                 case Keys.OemMinus:
-                    //timer.Interval -= 10;
-                    //e.Handled = true;
                     timer.Interval = (timer.Interval - 10 > 0) ? timer.Interval -= 10 : 1;
                     msg.Text = (timer.Interval <= 1) ? "Макс. скорость" : $" Скорость: {timer.Interval} мс";
                     e.Handled = true;
                     return;
+                case Keys.B:
+                    bufferDraw.Checked = !bufferDraw.Checked;
+                    e.Handled = true;
+                    break;
                 default:
                     break;
             }
@@ -325,216 +360,247 @@ namespace Actions
         /// </summary>
         private void MoveFigure(object sender, EventArgs e)
         {
-            Random rnd = new Random();
-            int xStep = rnd.Next(0, 50);
-            int yStep = rnd.Next(0, 50);
-            var square = p.ClientSize;
-            
-            if (points.Count > 0)
+            moverSet = (sender as Timer, e);
+            TypeMover type = (TypeMover)(sender as Timer).Tag;
+            PictureBox p = GetDrowObj();    
+
+            if (p != null)
             {
-                Point t = new Point();
-                for (int i = 0; i < points.Count; i++)
+                var square = p.ClientSize;
+                switch (type)
                 {
-                    t.X = points[i].X;
-                    t.Y = points[i].Y;
+                    case TypeMover.Auto:
+                        Random rnd = new Random();
+                        int xStep = rnd.Next(0, 50);
+                        int yStep = rnd.Next(0, 50);
 
-                    if (flags[i])
-                    {
-                        
-                        if (t.X + xStep <= square.Width  || t.Y  + yStep <= square.Height )
+                        if (points.Count > 0)
                         {
-                            if (t.X + xStep <= square.Width)
+                            Point t = new Point();
+                            for (int i = 0; i < points.Count; i++)
                             {
-                                t.X += xStep;
-                            }
-                            else
-                            {
-                                t.X = square.Width- 3;
-                                flags[i] = false;
-                            }
-                                
-                            if (t.Y + yStep <= square.Height)
-                            {
-                                t.Y += yStep;
-                            }
-                            else
-                            {
-                                t.Y = square.Height-3;
-                                flags[i] = false;
+                                t.X = points[i].X;
+                                t.Y = points[i].Y;
+                                CheckReflection(xStep, yStep, square, ref t, i);
 
+                                points[i] = t;
+                                p.Refresh();
                             }
-                            
                         }
+                        break;
+                    case TypeMover.Handle:
+                        var k = (TypeMover)(sender as Timer).Tag;
+                        HandMoveObj(keys);
+                        timer.Enabled = !timer.Enabled;
+                        break;
+                }
+            }   
+        }
+        /// <summary>
+        /// Проверка на достижение границ.
+        /// </summary>
+        /// <param name="xStep">Шаг по оси Х.</param>
+        /// <param name="yStep">Шаг по оси Y.</param>
+        /// <param name="square"></param>
+        /// <param name="t"></param>
+        /// <param name="i"></param>
+        private Point CheckReflection(int xStep, int yStep, Size square, ref Point t, int i)
+        {
+            if (flags[i])
+            {
+                if (t.X + xStep <= square.Width || t.Y + yStep <= square.Height)
+                {
+                    if (t.X + xStep <= square.Width)
+                    {
+                        t.X += xStep;
                     }
                     else
                     {
-                        if (t.X - xStep  >= 0 || t.Y - yStep  >= 0)
-                        {
-                            if (t.X - xStep >= 0)
-                            {
-                                t.X -= xStep;
-                            }
-                            else
-                            {
-                                t.X = 2;
-                                flags[i] = true;
-                            }
-                                
-                            if (t.Y - yStep >= 0)
-                            {
-                                t.Y -= yStep;
-                            }
-                            else
-                            {
-                                t.Y = 2;
-                                flags[i] = true;
-                            }
-                        }
+                        t.X = square.Width - 3;
+                        flags[i] = false;
                     }
-                    points[i] = t;
-                    p.Refresh();
+
+                    if (t.Y + yStep <= square.Height)
+                    {
+                        t.Y += yStep;
+                    }
+                    else
+                    {
+                        t.Y = square.Height - 3;
+                        flags[i] = false;
+                    }
+
+                }
+                
+            }
+            else
+            {
+                if (t.X - xStep >= 0 || t.Y - yStep >= 0)
+                {
+                    if (t.X - xStep >= 0)
+                    {
+                        t.X -= xStep;
+                    }
+                    else
+                    {
+                        t.X = 2;
+                        flags[i] = true;
+                    }
+
+                    if (t.Y - yStep >= 0)
+                    {
+                        t.Y -= yStep;
+                    }
+                    else
+                    {
+                        t.Y = 2;
+                        flags[i] = true;
+                    }
+                }
+            }
+            return new Point(t.X, t.Y);
+        }
+
+        /// <summary>
+        /// Отрисовка фигур.
+        /// </summary>
+        private void DrawFigures(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            foreach (KeyValuePair<LineType, bool> modeDrawing in status)
+            {
+                if (modeDrawing.Value)
+                {
+                    DrawingObjects(modeDrawing.Key, g);// Метод отрисовки по требуемого типу LineType
                 }
             }
         }
         /// <summary>
-        /// Отрисовка фигур.
+        /// Отрисовка объектов
         /// </summary>
-        private void DrawSomethings(object sender, PaintEventArgs e)
+        private void DrawingObjects(LineType key, Graphics g)
         {
-            var g = e.Graphics;
             
-            if (flagMOves)
+            switch (key)
             {
-                g.FillEllipse(Brushes.Red, movepoint.X, movepoint.Y, 8, 8);
-            }
-            
-            if ((sender as PictureBox).Tag != null)
-            {
-                switch ((LineType)(sender as PictureBox).Tag)
-                {
-                    case LineType.Point:
-                        //TODO проработать,если не нужно постоянное отображение точек.
-                        foreach (var item in points)
-                        {
-                            g.FillEllipse(new SolidBrush(pointsSet[0].color), item.X, item.Y, pointsSet[0].size, pointsSet[0].size);
-                        }
-                        break;
-                    case LineType.Curve:
-                        if (points.Count > 2)
-                        {
-                            g.DrawClosedCurve(new Pen(pointsSet[1].color, pointsSet[1].size), points.ToArray());
-                            msg.Text = "";
-                        }
-                        else
-                        {
-                            msg.Text = $"Добавте {3 - points.Count} точек";
-                        }
-                        break;
-                    case LineType.Bezier:
-                        // 4 points need
-                        // запилить чтобы лишнии точки выделялись красным 
-                        if (points.Count % 3 - 1 == 0)
-                        {
-                            msg.Text = "";
-                            g.Clear(baseBackColor);
-                            for (int i = 0; i < points.Count; i++)
-                            {
-                                if (i % 3 == 0)
-                                {
-                                    g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X, points[i].Y, pointsSet[0].size, pointsSet[0].size);
-                                }
-                                else
-                                    g.FillEllipse(new SolidBrush(Color.Green), points[i].X, points[i].Y, pointsSet[0].size, pointsSet[0].size);
-                            }
-
-                            g.DrawBeziers(new Pen(pointsSet[2].color, pointsSet[2].size), points.ToArray());
-                        }
-                        else
-                        {
-                            int val = points.Count % 3 - 1;
-                            if (val == 1 || val == -1)
-                            {
-                                if (val == 1)
-                                {
-                                    for (int i = 0; i < points.Count; i++)
-                                    {
-                                        if (i < points.Count - 1)
-                                        {
-                                            g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X, points[i].Y, pointsSet[0].size, pointsSet[0].size);
-                                        }
-                                        else
-                                        {
-                                            g.FillEllipse(new SolidBrush(Color.Red), points[i].X, points[i].Y, pointsSet[0].size + 2, pointsSet[0].size + 2);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    for (int i = 0; i < points.Count; i++)
-                                    {
-                                        if (i < points.Count - 2)
-                                        {
-                                            g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X, points[i].Y, pointsSet[0].size, pointsSet[0].size);
-                                        }
-                                        else
-                                        {
-                                            g.FillEllipse(new SolidBrush(Color.Red), points[i].X, points[i].Y, pointsSet[0].size + 2, pointsSet[0].size + 2);
-                                        }
-                                    }
-                                }
-                                
-                            }
-
-                            
-                            msg.Text = $"Error 404";
-                        }
-                        //TODO если точек больше 4ех
-                        break;
-                    case LineType.Polygon:
-                        // 2 points need
-                        if (points.Count > 2)
-                        {
-                            g.DrawPolygon(new Pen(pointsSet[3].color, pointsSet[3].size), points.ToArray());
-                            msg.Text = "";
-                        }
-                        else
-                        {
-                            msg.Text = $"Добавте {3 - points.Count} точек";
-                            
-                        }
-                        break;
-                    case LineType.FilledCurve:
-                        // 3 points need
-                        if (points.Count > 2)
-                        {
-                            g.FillClosedCurve(new SolidBrush(pointsSet[4].color), points.ToArray());
-                            msg.Text = "";
-                        }
-                        else
-                        {
-                            msg.Text = $"Добавте {3 - points.Count} точек";
-                        }
-                        break;
-                    default:
-                        break;
-                }
-                if (points.Count > 0 && (LineType)(sender as PictureBox).Tag != LineType.Bezier)
-                {
-                    foreach (var point in points)
+                case LineType.Point:
+                    // Если статус тру то дабавляем точки
+                    foreach (var item in points)
                     {
-                        g.FillEllipse(new SolidBrush(pointsSet[0].color), point.X, point.Y, pointsSet[0].size, pointsSet[0].size);
+                        g.FillEllipse(new SolidBrush(pointsSet[0].color), item.X - pointsSet[0].size / 2, item.Y - pointsSet[0].size / 2, pointsSet[0].size, pointsSet[0].size);
                     }
-                }
+                    break;
+                case LineType.Curve:
+                    
+                    if (points.Count > 2)
+                    {
+                        g.DrawClosedCurve(new Pen(pointsSet[1].color, pointsSet[1].size), points.ToArray());
+                        msg.Text = "";
+                    }
+                    else
+                    {
+                        msg.Text = $"Добавте {3 - points.Count} точек";
+                    }
+                    break;
+                case LineType.Bezier:
+                    if (points.Count % 3 - 1 == 0)
+                    {
+                        msg.Text = "";
+                        //g.Clear(baseBackColor);
+                        for (int i = 0; i < points.Count; i++)
+                        {
+                            if (i % 3 == 0)
+                            {
+                                g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X - pointsSet[0].size / 2, points[i].Y - pointsSet[0].size / 2, pointsSet[0].size, pointsSet[0].size);
+                            }
+                            else
+                                g.FillEllipse(new SolidBrush(Color.Green), points[i].X - pointsSet[0].size / 2, points[i].Y - pointsSet[0].size / 2, pointsSet[0].size, pointsSet[0].size);
+                        }
+
+                        g.DrawBeziers(new Pen(pointsSet[2].color, pointsSet[2].size), points.ToArray());
+                    }
+                    else
+                    {
+                        int val = points.Count % 3 - 1;
+                        if (val == 1 || val == -1)
+                        {
+                            if (val == 1)
+                            {
+                                for (int i = 0; i < points.Count; i++)
+                                {
+                                    if (i < points.Count - 1)
+                                    {
+                                        g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X - pointsSet[0].size / 2, points[i].Y - pointsSet[0].size / 2, pointsSet[0].size, pointsSet[0].size);
+                                    }
+                                    else
+                                    {
+                                        g.FillEllipse(new SolidBrush(Color.Red), points[i].X - pointsSet[0].size / 2, points[i].Y - pointsSet[0].size / 2, pointsSet[0].size + 2, pointsSet[0].size + 2);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                for (int i = 0; i < points.Count; i++)
+                                {
+                                    if (i < points.Count - 2)
+                                    {
+                                        g.FillEllipse(new SolidBrush(pointsSet[0].color), points[i].X - pointsSet[0].size / 2, points[i].Y - pointsSet[0].size / 2, pointsSet[0].size, pointsSet[0].size);
+                                    }
+                                    else
+                                    {
+                                        g.FillEllipse(new SolidBrush(Color.Red), points[i].X - pointsSet[0].size / 2, points[i].Y - pointsSet[0].size / 2, pointsSet[0].size + 2, pointsSet[0].size + 2);
+                                    }
+                                }
+                            }
+
+                        }
+
+                        //TODO подумать как задавать надпись в информ метку
+                        msg.Text = $"Error 404";
+                    }
+                    
+                    break;
+                case LineType.Polygon:
+                    if (points.Count > 2)
+                    {
+                        g.DrawPolygon(new Pen(pointsSet[3].color, pointsSet[3].size), points.ToArray());
+                        msg.Text = "";
+                    }
+                    else
+                    {
+                        msg.Text = $"Добавте {3 - points.Count} точек";
+                    }
+                    break;
+                case LineType.FilledCurve:
+                    if (points.Count > 2)
+                    {
+                        g.FillClosedCurve(new SolidBrush(pointsSet[4].color), points.ToArray());
+                        msg.Text = "";
+                    }
+                    else
+                    {
+                        msg.Text = $"Добавте {3 - points.Count} точек";
+                    }
+                    break;
+                case LineType.None:
+                    //рисуем точки всегда
+                    break;
+               
             }
-            
-            
         }
         /// <summary>
         /// Обработка нажатий кнопок. 
         /// </summary>
         private void DrawLineType(object sender, EventArgs e)
         {
-            switch ((LineType)(sender as Button).Tag)
+            var currentObj = sender as Button;
+
+            LineType typeObj;
+            PictureBox drawObj;
+
+            (typeObj, drawObj) = (ValueTuple<LineType, PictureBox>)currentObj.Tag;
+            
+            switch (typeObj)
             {
                 case LineType.Point:
                 case LineType.Curve:
@@ -542,8 +608,19 @@ namespace Actions
                 case LineType.Polygon:                    
                 case LineType.FilledCurve:
                     // Добавляем в мальберт объект лперечисления LineType
-                    p.Tag = (LineType)(sender as Button).Tag;
-                    p.Refresh();
+                    status[typeObj] = !status[typeObj];
+                    //TODO Подумать как взаимно изменять щелчки клавиш и отображение фигур
+                    //if (typeObj == LineType.FilledCurve)
+                    //{
+                    //    for (int i = 2; i < 5; i++)
+                    //    {
+                    //        LineType type = (LineType)i;
+                    //        status[type] = (status[type]) ? !status[type] : false;
+                    //    }
+                    //}
+                    currentObj.ForeColor = (status[typeObj]) ? Color.Red : Color.Black;
+                    drawObj.Tag = (status[typeObj]) ? typeObj: LineType.None;
+                    drawObj.Refresh();
                     break;
             }
         }
@@ -555,7 +632,10 @@ namespace Actions
                 case Keys.Down:
                 case Keys.Right:
                 case Keys.Left:
-                    HandMoveObj(keyData);
+                    timer.Tag = TypeMover.Handle;
+                    timer.Enabled = !timer.Enabled;
+                    keys = keyData;
+                    MoveFigure(timer, moverSet.Item2);
                     return true;
                     
                 case Keys.Space:
@@ -564,11 +644,8 @@ namespace Actions
                 case Keys.OemMinus:
                 case Keys.Add:
                 case Keys.Oemplus:
-                    this.Text = "Нажали "+ keyData;
-                    return false;
                 case Keys.B:
-                    bufferDraw.Checked = !bufferDraw.Checked;
-                    return true;
+                    return false;
                 default:
                     return true;
             }
@@ -578,6 +655,7 @@ namespace Actions
         /// </summary>
         private void HandMoveObj(Keys keyData)
         {
+            //TODO с кооперировать с методом MoveFigure и реализовать выбор по типу движения ручками вс автоматически
             switch (keyData)
             {
                 case Keys.Up:
@@ -602,52 +680,80 @@ namespace Actions
         /// </summary>
         private void NewMethod(TypeHandChangePositionObject yU)
         {
+            //TODO Ввести проверку положения точек при движении
             int delta = 10;
             Point temp;
-            var area = p.ClientSize;
-            for (int i = 0; i < points.Count; i++)
+            PictureBox p = GetDrowObj();
+            if (p != null)
             {
-                temp = points[i];
-                switch (yU)
+                var area = p.ClientSize;
+
+                for (int i = 0; i < points.Count; i++)
                 {
-                    case TypeHandChangePositionObject.xR:
-                        if (temp.X + delta < area.Width)
-                        {
-                            temp.X += delta;
-                        }
-                        else
-                            temp.X = area.Width - 5;
+                    temp = points[i];
+                    switch (yU)
+                    {
+                        case TypeHandChangePositionObject.xR:
 
-                        break;
-                    case TypeHandChangePositionObject.xL:
-                        if (temp.X - delta > 0)
-                        {
-                            temp.X -= delta;
-                        }
-                        else
-                            temp.X = 0;
-                        break;
-                    case TypeHandChangePositionObject.yU:
+                            temp = CheckReflection(delta, 0, area, ref temp, i);
 
-                        if (temp.Y - delta > 0)
-                        {
-                            temp.Y -= delta;
-                        }
-                        else
-                            temp.Y = 0;
-                        break;
-                    case TypeHandChangePositionObject.yD:
-                        if (temp.Y + delta < area.Height)
-                        {
-                            temp.Y += delta;
-                        }
-                        else
-                            temp.Y = area.Height - 5;
-                        break;
+                            //if (temp.X + delta < area.Width)
+                            //{
+                            //    temp.X += delta;
+                            //}
+                            //else
+                            //    temp.X = area.Width - 5;
+
+                            break;
+                        case TypeHandChangePositionObject.xL:
+                            temp = CheckReflection(-delta, 0, area, ref temp, i);
+                            //if (temp.X - delta > 0)
+                            //{
+                            //    temp.X -= delta;
+                            //}
+                            //else
+                            //    temp.X = 0;
+                            break;
+                        case TypeHandChangePositionObject.yU:
+                            temp = CheckReflection(0, -delta, area, ref temp, i);
+                            //if (temp.Y - delta > 0)
+                            //{
+                            //    temp.Y -= delta;
+                            //}
+                            //else
+                            //    temp.Y = 0;
+                            break;
+                        case TypeHandChangePositionObject.yD:
+                            temp = CheckReflection(0, delta, area, ref temp, i);
+                            //if (temp.Y + delta < area.Height)
+                            //{
+                            //    temp.Y += delta;
+                            //}
+                            //else
+                            //    temp.Y = area.Height - 5;
+                            break;
+                    }
+                    points[i] = temp;
+                    p.Refresh();
                 }
-                points[i] = temp;
-                p.Refresh();
             }
+            
+        }
+        /// <summary>
+        /// Получение объекта отрисовки
+        /// </summary>
+        /// <returns>Graphics g</returns>
+        private PictureBox GetDrowObj()
+        {
+            
+            foreach (var item in this.Controls)
+            {
+                if (item is PictureBox drawObj)
+                {
+                    return drawObj;
+                }
+            }
+            return null;
         }
         static void Main()
         {
