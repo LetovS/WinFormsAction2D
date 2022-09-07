@@ -6,8 +6,6 @@ using static Actions.Parametrs;
 
 namespace Actions
 {
-    
-    
     public class Task4:Form
     {
         #region Consts

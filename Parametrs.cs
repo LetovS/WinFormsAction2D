@@ -8,7 +8,9 @@ namespace Actions
 {
     public class Parametrs : Form
     {
-        //TODO как динамически формировать панели со здвигом вниз с учетом обработки.
+        //TODO динамически создавать элементы в цикле
+        //TODO проработать структуру с названиями
+        //TODO Отрисовка выполнять в цикле анализируя объект.
         private Label examplePoint;
         private Label exampleCurve;
         private Label exampleBezier;
@@ -64,6 +66,10 @@ namespace Actions
             colorsPolygon = GetPenColors();
             colorsBezie = GetPenColors();
             colorsFillCurve = GetPenColors();
+            if (colorsPoint == colorsCurve)
+            {
+                int k = 9;
+            }
 
             this.Size = new Size(350, 600);
             this.Text = "Settings";
@@ -304,8 +310,6 @@ namespace Actions
             pFilledCurve.Controls.Add(lblFilledCurve);
             pFilledCurve.Controls.Add(colorFilledCurve);
             #endregion
-
-
             #region Actions about change color and/or size
 
             sizePoint.Tag = (LineType.Point, examplePoint);
@@ -340,17 +344,10 @@ namespace Actions
             sizeFilledCurve.Tag = (LineType.FilledCurve, exampleFilledCurve);
             colorFilledCurve.Tag = (LineType.FilledCurve, exampleFilledCurve);
             #endregion
-
-
-
             Button ok = new Button() { Text = "OK"};
             ok.SetBounds(ClientSize.Width / 2 - 40, ClientSize.Height - 10*delta, 80, 40);
             ok.DialogResult = DialogResult.OK;
             ok.Click += (o, e) => { this.Close(); };
-
-
-            
-
             #region Add elements to Control Form
             this.Controls.Add(lbl);
             this.Controls.Add(ok);
