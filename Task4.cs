@@ -406,6 +406,7 @@ namespace Actions
         /// <param name="i"></param>
         private Point CheckReflection(int xStep, int yStep, Size square, ref Point t, int i)
         {
+            //TODO не подходит для ручного ввода 
             if (flags[i])
             {
                 if (t.X + xStep <= square.Width || t.Y + yStep <= square.Height)
@@ -715,7 +716,7 @@ namespace Actions
                             //    temp.X = 0;
                             break;
                         case TypeHandChangePositionObject.yU:
-                            temp = CheckReflection(0, -delta, area, ref temp, i);
+                            temp = CheckReflection(0, delta, area, ref temp, i);
                             //if (temp.Y - delta > 0)
                             //{
                             //    temp.Y -= delta;
@@ -724,7 +725,7 @@ namespace Actions
                             //    temp.Y = 0;
                             break;
                         case TypeHandChangePositionObject.yD:
-                            temp = CheckReflection(0, delta, area, ref temp, i);
+                            temp = CheckReflection(0, -delta, area, ref temp, i);
                             //if (temp.Y + delta < area.Height)
                             //{
                             //    temp.Y += delta;
