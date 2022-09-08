@@ -43,7 +43,7 @@ namespace Actions
         }
         private (Timer, EventArgs) moverSet;
         private DrawSetting[] pointsSet;
-        private Keys keys;
+        
         /// <summary>
         /// Коллекция точек.
         /// </summary>
@@ -56,7 +56,7 @@ namespace Actions
         /// Базовый цвет фона плоскости отрисовки.
         /// </summary>
         private Color baseBackColor;
-
+        private bool[] testFlags = new bool[] { true, true };
         private Timer timer;
         enum TypeMover { Auto = 1, Handle, None }
         /// <summary>
@@ -355,44 +355,37 @@ namespace Actions
                     break;
             }
         }
+
+        
+
         /// <summary>
         /// Реализация движения.
         /// </summary>
         private void MoveFigure(object sender, EventArgs e)
         {
             moverSet = (sender as Timer, e);
-            TypeMover type = (TypeMover)(sender as Timer).Tag;
             PictureBox p = GetDrowObj();    
-
             if (p != null)
             {
                 var square = p.ClientSize;
-                switch (type)
+                // Установка величины случайного шага 
+                Random rnd = new Random();
+                int xStep = rnd.Next(0, 50);
+                int yStep = rnd.Next(0, 50);
+
+                // Изменение массива точек
+
+                if (points.Count > 0)
                 {
-                    case TypeMover.Auto:
-                        Random rnd = new Random();
-                        int xStep = rnd.Next(0, 50);
-                        int yStep = rnd.Next(0, 50);
-
-                        if (points.Count > 0)
-                        {
-                            Point t = new Point();
-                            for (int i = 0; i < points.Count; i++)
-                            {
-                                t.X = points[i].X;
-                                t.Y = points[i].Y;
-                                CheckReflection(xStep, yStep, square, ref t, i);
-
-                                points[i] = t;
-                                p.Refresh();
-                            }
-                        }
-                        break;
-                    case TypeMover.Handle:
-                        var k = (TypeMover)(sender as Timer).Tag;
-                        HandMoveObj(keys);
-                        timer.Enabled = !timer.Enabled;
-                        break;
+                    Point pointTemp = new Point();
+                    for (int i = 0; i < points.Count; i++)
+                    {
+                        pointTemp.X = points[i].X;
+                        pointTemp.Y = points[i].Y;
+                        CheckReflection(xStep, yStep, square, ref pointTemp, i);
+                        points[i] = pointTemp;
+                    }
+                    p.Refresh();
                 }
             }   
         }
@@ -406,6 +399,7 @@ namespace Actions
         /// <param name="i"></param>
         private Point CheckReflection(int xStep, int yStep, Size square, ref Point t, int i)
         {
+
             //TODO не подходит для ручного ввода 
             if (flags[i])
             {
@@ -432,11 +426,10 @@ namespace Actions
                     }
 
                 }
-                
             }
             else
             {
-                if (t.X - xStep >= 0 || t.Y - yStep >= 0)
+                if (t.X - xStep >= 0 || t.Y - yStep >= 0 )
                 {
                     if (t.X - xStep >= 0)
                     {
@@ -461,7 +454,6 @@ namespace Actions
             }
             return new Point(t.X, t.Y);
         }
-
         /// <summary>
         /// Отрисовка фигур.
         /// </summary>
@@ -633,10 +625,11 @@ namespace Actions
                 case Keys.Down:
                 case Keys.Right:
                 case Keys.Left:
-                    timer.Tag = TypeMover.Handle;
-                    timer.Enabled = !timer.Enabled;
-                    keys = keyData;
-                    MoveFigure(timer, moverSet.Item2);
+                    PictureBox p = GetDrowObj();
+                    // Изменение массива тчоек
+                    HandMoveObj(keyData);
+                    p.Refresh();
+
                     return true;
                     
                 case Keys.Space:
@@ -671,75 +664,128 @@ namespace Actions
                 case Keys.Left:
                     NewMethod(TypeHandChangePositionObject.xL);
                     break;
-                default:
-                    break;
             }
             
         }
         /// <summary>
         /// Сдвиг объекта стрелками.
         /// </summary>
-        private void NewMethod(TypeHandChangePositionObject yU)
+        private void NewMethod(TypeHandChangePositionObject side)
         {
             //TODO Ввести проверку положения точек при движении
             int delta = 10;
             Point temp;
             PictureBox p = GetDrowObj();
-            if (p != null)
-            {
-                var area = p.ClientSize;
-
-                for (int i = 0; i < points.Count; i++)
+            
+            var area = p.ClientSize;
+            bool someFlag = true;
+            if (!CheckedCrossClientSize(delta, side, area))
+            { 
+                for (int i = 0; i < points.Count && someFlag; i++)
                 {
                     temp = points[i];
-                    switch (yU)
+                    switch (side)
                     {
                         case TypeHandChangePositionObject.xR:
 
-                            temp = CheckReflection(delta, 0, area, ref temp, i);
-
-                            //if (temp.X + delta < area.Width)
-                            //{
-                            //    temp.X += delta;
-                            //}
-                            //else
-                            //    temp.X = area.Width - 5;
-
+                            if (temp.X + delta <= area.Width)
+                            {
+                                temp.X += delta;
+                            }
+                            else
+                            {
+                                temp.X = area.Width - pointsSet[i].size;
+                            }
                             break;
                         case TypeHandChangePositionObject.xL:
-                            temp = CheckReflection(-delta, 0, area, ref temp, i);
-                            //if (temp.X - delta > 0)
-                            //{
-                            //    temp.X -= delta;
-                            //}
-                            //else
-                            //    temp.X = 0;
+                            if (temp.X - delta >= 0)
+                            {
+                                temp.X -= delta;
+                            }
+                            else
+                            {
+                                temp.X = pointsSet[i].size;
+                            }
                             break;
                         case TypeHandChangePositionObject.yU:
-                            temp = CheckReflection(0, delta, area, ref temp, i);
-                            //if (temp.Y - delta > 0)
-                            //{
-                            //    temp.Y -= delta;
-                            //}
-                            //else
-                            //    temp.Y = 0;
+
+                            if (temp.Y - delta >= 0)
+                            {
+                                temp.Y -= delta;
+                            }
+                            else
+                            {
+                                temp.Y = pointsSet[i].size;
+                            }
+
                             break;
                         case TypeHandChangePositionObject.yD:
-                            temp = CheckReflection(0, -delta, area, ref temp, i);
-                            //if (temp.Y + delta < area.Height)
-                            //{
-                            //    temp.Y += delta;
-                            //}
-                            //else
-                            //    temp.Y = area.Height - 5;
+
+                            if (temp.Y + delta <= area.Height)
+                            {
+                                temp.Y += delta;
+                            }
+                            else
+                                temp.Y = area.Height - pointsSet[i].size;
                             break;
                     }
+                    flags[i] = !flags[i];
                     points[i] = temp;
-                    p.Refresh();
                 }
+                
+
+                    
             }
-            
         }
+
+        private bool CheckedCrossClientSize(int delta, TypeHandChangePositionObject side, Size area)
+        {
+            switch (side)
+            {
+                case TypeHandChangePositionObject.xR:
+                    foreach (var item in points)
+                    {
+                        if (item.X + delta >= area.Width)
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
+                    
+                case TypeHandChangePositionObject.xL:
+                    foreach (var item in points)
+                    {
+                        if (item.X - delta <= 0)
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
+                case TypeHandChangePositionObject.yU:
+                    foreach (var item in points)
+                    {
+
+                        if (item.Y - delta <= 0)
+                        {
+                            return true;
+                        }
+                        
+                    }
+                    return false;
+                case TypeHandChangePositionObject.yD:
+                    foreach (var item in points)
+                    {
+                        if (item.Y + delta >= area.Height)
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
+                default:
+                   return false;
+            }
+        }
+
         /// <summary>
         /// Получение объекта отрисовки
         /// </summary>
