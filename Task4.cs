@@ -3,6 +3,8 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Collections.Generic;
 using static Actions.Parametrs;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 namespace Actions
 {
@@ -20,9 +22,9 @@ namespace Actions
         /// </summary>
         public enum LineType { Point = 1, Curve = 2, Bezier = 3, Polygon =4 , FilledCurve = 5, None =6 }
         /// <summary>
-        /// Тип ручного перемещения объекта.
+        /// Направление ручного сдвига объекта.
         /// </summary>
-        enum TypeHandChangePositionObject
+        enum DisplacementDirection
         { 
             /// <summary>
             /// Смещение вправо.
@@ -41,9 +43,10 @@ namespace Actions
             /// </summary>
             yD
         }
-        private (Timer, EventArgs) moverSet;
+        /// <summary>
+        /// Настройки отрисовки точек.
+        /// </summary>
         private DrawSetting[] pointsSet;
-        
         /// <summary>
         /// Коллекция точек.
         /// </summary>
@@ -56,15 +59,16 @@ namespace Actions
         /// Базовый цвет фона плоскости отрисовки.
         /// </summary>
         private Color baseBackColor;
-        private bool[] testFlags = new bool[] { true, true };
+        /// <summary>
+        /// Подсказка при запуске приложения.
+        /// </summary>
+        private bool viewInformationAboutApp = true;
         private Timer timer;
         enum TypeMover { Auto = 1, Handle, None }
         /// <summary>
         /// Флаг редактирования положения точки.
         /// </summary>
         private bool flagMOves = false;
-        
-        
         /// <summary>
         /// Оповещение пользователя.
         /// </summary>
@@ -92,6 +96,7 @@ namespace Actions
         #endregion
         public Task4()
         {
+            viewInformationAboutApp = Loader();
             pointsSet = new Parametrs().GetSettingsForDrawing();
             points = new List<Point>();
             flags = new List<bool>();
@@ -175,6 +180,8 @@ namespace Actions
 
             #region Обработчики событий
             this.Load += Task4_Load;
+            this.FormClosing += (o, e) => { 
+                Save(); };
             #endregion
 
             #region Добавление кнопок в форму
@@ -196,6 +203,14 @@ namespace Actions
         {
             KeyPreview = true;
             KeyDown += PushKeys;
+            if (viewInformationAboutApp)
+            {
+                if (MessageBox.Show("F1 - вызов справки;\nSpace - вкл/выкл режим автоматического перемещения;\nEsc - очистить поле отрисовки;\nB(ENG) - вкл/выкл сглаживание отрисовки объектов;\nСтрелки - сдвиг по осям координат;\n+/- изменение скорости перемещения.\n\nХотите получать это сообщение в дальнейшем?", "Управление приложением.", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.No)
+                {
+                    viewInformationAboutApp = false;
+                }
+            }
+            
             foreach (var item in (sender as Task4).Controls)
             {
                 if (item is PictureBox p)
@@ -315,7 +330,6 @@ namespace Actions
         /// </summary>
         private void PushKeys(object sender, KeyEventArgs e)
         {
-            
             switch (e.KeyCode)
             {
                 case Keys.Escape:
@@ -355,39 +369,34 @@ namespace Actions
                     break;
             }
         }
-
-        
-
         /// <summary>
         /// Реализация движения.
         /// </summary>
         private void MoveFigure(object sender, EventArgs e)
         {
-            moverSet = (sender as Timer, e);
             PictureBox p = GetDrowObj();    
-            if (p != null)
+            
+            var square = p.ClientSize;
+            // Установка величины случайного шага 
+            Random rnd = new Random();
+            int xStep = rnd.Next(0, 50);
+            int yStep = rnd.Next(0, 50);
+
+            // Изменение массива точек
+
+            if (points.Count > 0)
             {
-                var square = p.ClientSize;
-                // Установка величины случайного шага 
-                Random rnd = new Random();
-                int xStep = rnd.Next(0, 50);
-                int yStep = rnd.Next(0, 50);
-
-                // Изменение массива точек
-
-                if (points.Count > 0)
+                Point pointTemp = new Point();
+                for (int i = 0; i < points.Count; i++)
                 {
-                    Point pointTemp = new Point();
-                    for (int i = 0; i < points.Count; i++)
-                    {
-                        pointTemp.X = points[i].X;
-                        pointTemp.Y = points[i].Y;
-                        CheckReflection(xStep, yStep, square, ref pointTemp, i);
-                        points[i] = pointTemp;
-                    }
-                    p.Refresh();
+                    pointTemp.X = points[i].X;
+                    pointTemp.Y = points[i].Y;
+                    CheckReflection(xStep, yStep, square, ref pointTemp, i);
+                    points[i] = pointTemp;
                 }
-            }   
+                p.Refresh();
+            }
+               
         }
         /// <summary>
         /// Проверка на достижение границ.
@@ -399,8 +408,6 @@ namespace Actions
         /// <param name="i"></param>
         private Point CheckReflection(int xStep, int yStep, Size square, ref Point t, int i)
         {
-
-            //TODO не подходит для ручного ввода 
             if (flags[i])
             {
                 if (t.X + xStep <= square.Width || t.Y + yStep <= square.Height)
@@ -548,10 +555,9 @@ namespace Actions
 
                         }
 
-                        //TODO подумать как задавать надпись в информ метку
+                        //TODO как расчитать число требуемых точек для построения.
                         msg.Text = $"Error 404";
                     }
-                    
                     break;
                 case LineType.Polygon:
                     if (points.Count > 2)
@@ -600,27 +606,25 @@ namespace Actions
                 case LineType.Bezier:
                 case LineType.Polygon:                    
                 case LineType.FilledCurve:
-                    // Добавляем в мальберт объект лперечисления LineType
                     status[typeObj] = !status[typeObj];
                     //TODO Подумать как взаимно изменять щелчки клавиш и отображение фигур
-                    //if (typeObj == LineType.FilledCurve)
-                    //{
-                    //    for (int i = 2; i < 5; i++)
-                    //    {
-                    //        LineType type = (LineType)i;
-                    //        status[type] = (status[type]) ? !status[type] : false;
-                    //    }
-                    //}
                     currentObj.ForeColor = (status[typeObj]) ? Color.Red : Color.Black;
                     drawObj.Tag = (status[typeObj]) ? typeObj: LineType.None;
                     drawObj.Refresh();
                     break;
             }
         }
+        /// <summary>
+        /// Переопределение обработки командных кнопок.
+        /// </summary>
+        /// <returns>True - обработано/ False - не обработано.</returns>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             switch (keyData)
             {
+                case Keys.F1:
+                   MessageBox.Show("F1 - вызов справки;\nSpace - вкл/выкл режим автоматического перемещения;\nEsc - очистить поле отрисовки;\nB(ENG) - вкл/выкл сглаживание отрисовки объектов;\nСтрелки - сдвиг по осям координат;\n+/- изменение скорости перемещения.", "Управление приложением", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return true;
                 case Keys.Up:
                 case Keys.Down:
                 case Keys.Right:
@@ -629,7 +633,6 @@ namespace Actions
                     // Изменение массива тчоек
                     HandMoveObj(keyData);
                     p.Refresh();
-
                     return true;
                     
                 case Keys.Space:
@@ -644,25 +647,25 @@ namespace Actions
                     return true;
             }
         }
+
         /// <summary>
         /// Смещение объектов ручками.
         /// </summary>
         private void HandMoveObj(Keys keyData)
         {
-            //TODO с кооперировать с методом MoveFigure и реализовать выбор по типу движения ручками вс автоматически
             switch (keyData)
             {
                 case Keys.Up:
-                    NewMethod(TypeHandChangePositionObject.yU);
+                    CompleteStepPoints(DisplacementDirection.yU);
                     break;
                 case Keys.Down:
-                    NewMethod(TypeHandChangePositionObject.yD);
+                    CompleteStepPoints(DisplacementDirection.yD);
                     break;
                 case Keys.Right:
-                    NewMethod(TypeHandChangePositionObject.xR);
+                    CompleteStepPoints(DisplacementDirection.xR);
                     break;
                 case Keys.Left:
-                    NewMethod(TypeHandChangePositionObject.xL);
+                    CompleteStepPoints(DisplacementDirection.xL);
                     break;
             }
             
@@ -670,23 +673,22 @@ namespace Actions
         /// <summary>
         /// Сдвиг объекта стрелками.
         /// </summary>
-        private void NewMethod(TypeHandChangePositionObject side)
+        private void CompleteStepPoints(DisplacementDirection side)
         {
-            //TODO Ввести проверку положения точек при движении
             int delta = 10;
             Point temp;
             PictureBox p = GetDrowObj();
             
             var area = p.ClientSize;
             bool someFlag = true;
-            if (!CheckedCrossClientSize(delta, side, area))
+            if (CheckConditionMakeStepAllPoints(delta, side, area))
             { 
                 for (int i = 0; i < points.Count && someFlag; i++)
                 {
                     temp = points[i];
                     switch (side)
                     {
-                        case TypeHandChangePositionObject.xR:
+                        case DisplacementDirection.xR:
 
                             if (temp.X + delta <= area.Width)
                             {
@@ -697,7 +699,7 @@ namespace Actions
                                 temp.X = area.Width - pointsSet[i].size;
                             }
                             break;
-                        case TypeHandChangePositionObject.xL:
+                        case DisplacementDirection.xL:
                             if (temp.X - delta >= 0)
                             {
                                 temp.X -= delta;
@@ -707,7 +709,7 @@ namespace Actions
                                 temp.X = pointsSet[i].size;
                             }
                             break;
-                        case TypeHandChangePositionObject.yU:
+                        case DisplacementDirection.yU:
 
                             if (temp.Y - delta >= 0)
                             {
@@ -719,7 +721,7 @@ namespace Actions
                             }
 
                             break;
-                        case TypeHandChangePositionObject.yD:
+                        case DisplacementDirection.yD:
 
                             if (temp.Y + delta <= area.Height)
                             {
@@ -732,60 +734,62 @@ namespace Actions
                     flags[i] = !flags[i];
                     points[i] = temp;
                 }
-                
-
-                    
             }
         }
-
-        private bool CheckedCrossClientSize(int delta, TypeHandChangePositionObject side, Size area)
+        /// <summary>
+        /// Проверка выполнения шага всех точек
+        /// </summary>
+        /// <param name="delta">Величина шага.</param>
+        /// <param name="side">Направление движения.</param>
+        /// <param name="area">Область движения.</param>
+        /// <returns>can step = true/ can't step = false.</returns>
+        private bool CheckConditionMakeStepAllPoints(int delta, DisplacementDirection side, Size area)
         {
             switch (side)
             {
-                case TypeHandChangePositionObject.xR:
+                case DisplacementDirection.xR:
                     foreach (var item in points)
                     {
                         if (item.X + delta >= area.Width)
                         {
-                            return true;
+                            return false;
                         }
                     }
-                    return false;
+                    return true;
                     
-                case TypeHandChangePositionObject.xL:
+                case DisplacementDirection.xL:
                     foreach (var item in points)
                     {
                         if (item.X - delta <= 0)
                         {
-                            return true;
+                            return false;
                         }
                     }
-                    return false;
-                case TypeHandChangePositionObject.yU:
+                    return true;
+                case DisplacementDirection.yU:
                     foreach (var item in points)
                     {
 
                         if (item.Y - delta <= 0)
                         {
-                            return true;
+                            return false;
                         }
                         
                     }
-                    return false;
-                case TypeHandChangePositionObject.yD:
+                    return true;
+                case DisplacementDirection.yD:
                     foreach (var item in points)
                     {
                         if (item.Y + delta >= area.Height)
                         {
-                            return true;
+                            return false;
                         }
                     }
-                    return false;
+                    return true;
                 default:
-                   return false;
+                   return true;
             }
         }
-
         /// <summary>
         /// Получение объекта отрисовки
         /// </summary>
@@ -805,6 +809,33 @@ namespace Actions
         static void Main()
         {
             Application.Run(new Task4());
+        }
+        /// <summary>
+        /// Загрузка настроек основной формы.
+        /// </summary>
+        /// <returns>bool, Показ игнформации.</returns>
+        private bool Loader()
+        {
+            BinaryFormatter br = new BinaryFormatter();
+            Stream sw = new FileStream("SettingsMain.bin", FileMode.OpenOrCreate);
+            if (sw.Length > 0)
+            {
+                bool temp = (bool)br.Deserialize(sw);
+                sw.Close();
+                return temp;
+            }
+            sw.Close();
+            return true;
+        }
+        /// <summary>
+        /// Сохранение настроек основной формы.
+        /// </summary>
+        private void Save()
+        {
+            BinaryFormatter br = new BinaryFormatter();
+            Stream sw = new FileStream("SettingsMain.bin", FileMode.OpenOrCreate);
+            br.Serialize(sw, viewInformationAboutApp);
+            sw.Close();
         }
     }
 }

@@ -45,7 +45,6 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Loader.cs" />
     <Compile Include="Parametrs.cs">
       <SubType>Form</SubType>
     </Compile>

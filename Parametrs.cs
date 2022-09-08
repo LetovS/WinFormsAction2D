@@ -11,9 +11,7 @@ namespace Actions
 {
     public class Parametrs : Form
     {
-        //TODO динамически создавать элементы в цикле
-        //TODO проработать структуру с названиями
-        //TODO Отрисовка выполнять в цикле анализируя объект.
+        // Оптимизирвоать создание полей с настройками в отображаемой форме
         private Label examplePoint;
         private Label exampleCurve;
         private Label exampleBezier;
@@ -614,7 +612,7 @@ namespace Actions
         private void SaveData()
         {
             BinaryFormatter br = new BinaryFormatter();
-            Stream sw = new FileStream("Settings.bin", FileMode.OpenOrCreate);
+            Stream sw = new FileStream("SettingsParametrs.bin", FileMode.OpenOrCreate);
             br.Serialize(sw, pointsSet);
             sw.Close();
         }
@@ -625,7 +623,7 @@ namespace Actions
         private DrawSetting[] LoadData()
         {
             BinaryFormatter br = new BinaryFormatter();
-            Stream sw = new FileStream("Settings.bin", FileMode.OpenOrCreate);
+            Stream sw = new FileStream("SettingsParametrs.bin", FileMode.OpenOrCreate);
             if (sw.Length == 0 )
             {
                 sw.Close();
