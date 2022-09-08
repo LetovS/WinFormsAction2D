@@ -182,6 +182,9 @@ namespace Actions
             this.Load += Task4_Load;
             this.FormClosing += (o, e) => { 
                 Save(); };
+            this.Shown += ShowMsg;
+
+
             #endregion
 
             #region Добавление кнопок в форму
@@ -199,10 +202,8 @@ namespace Actions
             #endregion
         }
 
-        private void Task4_Load(object sender, EventArgs e)
+        private void ShowMsg(object sender, EventArgs e)
         {
-            KeyPreview = true;
-            KeyDown += PushKeys;
             if (viewInformationAboutApp)
             {
                 if (MessageBox.Show("F1 - вызов справки;\nSpace - вкл/выкл режим автоматического перемещения;\nEsc - очистить поле отрисовки;\nB(ENG) - вкл/выкл сглаживание отрисовки объектов;\nСтрелки - сдвиг по осям координат;\n+/- изменение скорости перемещения.\n\nХотите получать это сообщение в дальнейшем?", "Управление приложением.", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.No)
@@ -210,6 +211,13 @@ namespace Actions
                     viewInformationAboutApp = false;
                 }
             }
+        }
+
+        private void Task4_Load(object sender, EventArgs e)
+        {
+            KeyPreview = true;
+            KeyDown += PushKeys;
+            
             
             foreach (var item in (sender as Task4).Controls)
             {
